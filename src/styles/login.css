@@ -10,7 +10,7 @@
     body.login-page {
       height: 100%;
       margin: 0; overflow: hidden;
-      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Montserrat', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       color: var(--text);
       background: var(--ink);
     }
