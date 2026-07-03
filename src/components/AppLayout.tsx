@@ -90,9 +90,7 @@ export default function AppLayout({ active, children }: Props) {
   return (
     <div className={`layout${collapsed ? ' collapsed' : ''}`} id="layout">
       <aside className="sidebar">
-        <div className="brand" aria-label="TECOMNET Inventario">
-          <span className="brand-title">Inventario</span>
-        </div>
+        <div className="brand" aria-label="Inventario" />
         <nav className="nav flex-column">
           {NAV.map((n) =>
             'group' in n ? (
