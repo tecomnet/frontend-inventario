@@ -9,7 +9,7 @@
   --tec-green-dark: #1E40AF;
   --tec-sidebar: #1f2937;
   --tec-sidebar-hover: #374151;
-  --tec-font: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --tec-font: 'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   /* Que los componentes de Bootstrap también usen Inter. */
   --bs-body-font-family: var(--tec-font);
 }
@@ -60,7 +60,7 @@ body { min-height: 100vh; background: #f3f4f6; font-family: var(--tec-font); }
   background: linear-gradient(180deg, #38bdf8, #2563eb);
 }
 .sidebar .nav-link.active i { color: #38bdf8; }
-.sidebar .nav-link.sub { padding-left: 2.6rem; font-size: .88rem; }
+.sidebar .nav-link.submenu-item { padding-left: 2.6rem; font-size: .88rem; text-transform: none; letter-spacing: normal; }
 
 /* El menú ocupa el alto disponible y hace scroll VERTICAL si no cabe. */
 .sidebar .nav {

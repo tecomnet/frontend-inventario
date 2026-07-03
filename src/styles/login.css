@@ -10,7 +10,7 @@
     body.login-page {
       height: 100%;
       margin: 0; overflow: hidden;
-      font-family: 'Montserrat', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      font-family: 'Lato', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       color: var(--text);
       background: var(--ink);
     }
@@ -66,12 +66,12 @@
     .logo-ring img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .logo-ring .fallback { font-size: 3.2rem; color: var(--cyan); }
 
-    .brand {
+    .login-page .brand {
       text-align: center; font-weight: 800; font-size: 1.75rem; letter-spacing: 3px;
       color: var(--text); margin-bottom: .15rem;
     }
-    .brand .accent { color: var(--cyan); text-shadow: 0 0 16px rgba(0,224,255,.55); }
-    .sub {
+    .login-page .brand .accent { color: var(--cyan); text-shadow: 0 0 16px rgba(0,224,255,.55); }
+    .login-page .sub {
       text-align: center; color: #8aa2c4; font-size: .72rem; letter-spacing: 3px;
       text-transform: uppercase; margin-bottom: 1.8rem;
     }

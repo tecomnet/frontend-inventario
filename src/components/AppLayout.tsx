@@ -108,7 +108,7 @@ export default function AppLayout({ active, children }: Props) {
                   <NavLink
                     key={i.key}
                     to={i.to}
-                    className={`nav-link sub${i.key === active ? ' active' : ''}`}
+                    className={`nav-link submenu-item${i.key === active ? ' active' : ''}`}
                   >
                     <i className={`bi ${i.icon}`} /> {i.label}
                   </NavLink>
