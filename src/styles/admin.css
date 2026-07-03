@@ -9,9 +9,12 @@
   --tec-green-dark: #1E40AF;
   --tec-sidebar: #1f2937;
   --tec-sidebar-hover: #374151;
+  --tec-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Que los componentes de Bootstrap también usen Inter. */
+  --bs-body-font-family: var(--tec-font);
 }
 
-body { min-height: 100vh; background: #f3f4f6; }
+body { min-height: 100vh; background: #f3f4f6; font-family: var(--tec-font); }
 
 /* ===== Layout ===== */
 .layout { display: flex; min-height: 100vh; }
