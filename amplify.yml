@@ -1,0 +1,32 @@
+# Build settings de AWS Amplify Hosting para el FRONTEND (SPA estática) del Inventario.
+# Conecta este repo en la consola de Amplify; cada push a la rama hace build y deploy.
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # npm install (no npm ci): tolera diferencias de dependencias opcionales
+        # por plataforma (p. ej. binarios nativos del bundler en Linux), que
+        # hacían fallar a npm ci en el entorno de Amplify.
+        - npm install
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+
+# IMPORTANTE (SPA + BFF):
+# 1) El front (dist) lo sirve Amplify Hosting. Para que el routing de react-router
+#    funcione en recargas de página, agrega en Amplify → Rewrites and redirects:
+#       Source: /<*>   Target: /index.html   Type: 200 (Rewrite)   (excluye /api/<*>)
+# 2) El BFF (carpeta server/) NO corre en Amplify Hosting (es estático). Despliega
+#    server/lambda.ts como función Lambda y enruta /api/* hacia ella:
+#       Lambda + Function URL y un Rewrite en Amplify:
+#          Source: /api/<*>  Target: https://<tu-lambda-url>/api/<*>  Type: 200
+#    Las variables de entorno (API_BASE, SESSION_SECRET, etc.) van en la
+#    configuración de la función (NO en el repo). Ver DEPLOY.md.

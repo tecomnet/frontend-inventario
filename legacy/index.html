@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="./css/styles.css">
+<link rel="icon" href="./assets/logo.png" type="image/png">
+</head>
+
+<body>
+
+<div class="layout">
+
+    <!-- Mobile overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+
+        <div class="brand">
+            <img class="brand-logo" src="./assets/logo.png" alt="Inventario">
+            <div class="brand-text">
+                <h2>Inventario</h2>
+                <p>Panel de control</p>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle" title="Colapsar menú" onclick="toggleSidebar()">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+        </div>
+
+        <button onclick="router('home')" data-tip="Inicio">
+            <i class="fa-solid fa-house-chimney-user"></i>
+            <span class="nav-label"> Inicio</span>
+        </button>
+        
+        <!-- SIMS -->
+        <div class="menu-group">
+            <button onclick="toggleMenu('Sims')" data-tip="Sims">
+                <i class="fa-solid fa-sim-card"></i>
+                <span class="nav-label"> Sims</span>
+            </button>
+            <div id="Sims" class="submenu">
+                <button onclick="router('Sims')"><i class="fa-solid fa-caret-right"></i> Sims</button>
+            </div>
+        </div>
+
+        <!-- CATÁLOGOS -->
+        <div class="menu-group">
+            <button onclick="toggleMenu('catalogos')" data-tip="Productos">
+                <i class="fa-solid fa-cart-flatbed"></i>
+                <span class="nav-label"> Productos</span>
+            </button>
+            <div id="catalogos" class="submenu">
+                <button onclick="router('productos')"><i class="fa-solid fa-caret-right"></i> Productos</button>
+                <button onclick="router('marcas')"><i class="fa-solid fa-caret-right"></i> Marcas</button>
+                <button onclick="router('presentacion')"><i class="fa-solid fa-caret-right"></i> Presentaciones</button>
+                <button onclick="router('unidadmedida')"><i class="fa-solid fa-caret-right"></i> Unidades de Medida</button>
+                <button onclick="router('proveedores')"><i class="fa-solid fa-caret-right"></i> Proveedores</button>
+                <button onclick="router('lineas')"><i class="fa-solid fa-caret-right"></i> Líneas</button>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <button onclick="toggleMenu('catalogosRecepciones')" data-tip="Compras">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span class="nav-label"> Compras</span>
+            </button>
+            <div id="catalogosRecepciones" class="submenu">
+                <button onclick="router('compras')"><i class="fa-solid fa-caret-right"></i> Compras</button>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <button onclick="toggleMenu('catalogosInventarios')" data-tip="Inventarios">
+                <i class="fa-solid fa-list-check"></i>
+                <span class="nav-label"> Inventarios</span>
+            </button>
+            <div id="catalogosInventarios" class="submenu">
+                <button onclick="router('movimientos')"><i class="fa-solid fa-caret-right"></i> Movimientos de Almacén</button>
+                <button onclick="router('existencias')"><i class="fa-solid fa-caret-right"></i> Existencias (listado)</button>
+                <button onclick="router('buscarExistencias')"><i class="fa-solid fa-caret-right"></i> Buscar Existencias</button>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <button onclick="toggleMenu('Importadores')" data-tip="Importadores">
+                <i class="fa-solid fa-file-csv"></i>
+                <span class="nav-label"> Importadores</span>
+            </button>
+            <div id="Importadores" class="submenu">
+                <button onclick="router('importador')"><i class="fa-solid fa-caret-right"></i> Importador Inventario</button>
+                <button onclick="router('importadorSims')"><i class="fa-solid fa-caret-right"></i> Importador Sims</button>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <button onclick="toggleMenu('KPIs')" data-tip="KPI's">
+                <i class="fa-solid fa-chart-line"></i>
+                <span class="nav-label"> KPI's</span>
+            </button>
+            <div id="KPIs" class="submenu">
+                <button onclick="router('kpis')"><i class="fa-solid fa-caret-right"></i> Kardex</button>
+                <button onclick="router('home')"><i class="fa-solid fa-caret-right"></i> Dashboard</button>
+                <button onclick="router('buscarExistencias')"><i class="fa-solid fa-caret-right"></i> Existencias</button>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <button onclick="toggleMenu('Configuracion')" data-tip="Configuración">
+                <i class="fa-solid fa-gear"></i>
+                <span class="nav-label"> Configuración</span>
+            </button>
+            <div id="Configuracion" class="submenu">
+                <button onclick="router('empresas')"><i class="fa-solid fa-caret-right"></i> Empresas</button>
+                <button onclick="router('unidadesNegocio')"><i class="fa-solid fa-caret-right"></i> Unidades de Negocio</button>
+                <button onclick="router('almacenes')"><i class="fa-solid fa-caret-right"></i> Almacenes</button>
+                <button onclick="router('tipos')"><i class="fa-solid fa-caret-right"></i> Tipos Transacción</button>
+            </div>
+        </div>
+
+        <button class="logout-button" onclick="logout()" data-tip="Salir">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span class="nav-label"> Salir</span>
+        </button>
+    </aside>
+
+    <!-- Contenedor dinámico -->
+    <main class="content">
+        <div class="topbar">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <button class="mobile-menu-btn" onclick="openMobileSidebar()" title="Abrir menú">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <span class="eyebrow">Sistema de inventarios</span>
+                    <h1>Bienvenido</h1>
+                </div>
+            </div>
+            <button class="icon-button" type="button" onclick="router('home')" title="Ir al dashboard">
+                <img src="./assets/logo.png" alt="Dashboard">
+            </button>
+        </div>
+        <section id="app" class="workspace">
+            <div class="empty-state">
+                <i class="fa-solid fa-layer-group"></i>
+                <h2>Selecciona un módulo</h2>
+                <p>Elige una opción del menú lateral para comenzar.</p>
+            </div>
+        </section>
+    </main>
+    
+</div>
+<script src="js/app.js" defer></script>
+</body>
+</html>

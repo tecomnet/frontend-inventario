@@ -1,0 +1,143 @@
+    :root {
+      --cyan:   #00e0ff;
+      --violet: #7b5cff;
+      --blue:   #4aa8ff;
+      --ink:    #05070f;
+      --text:   #e8ecf6;
+    }
+    /* Estilos scopeados a la página de login (body.login-page) para que NO
+       se filtren al resto del panel cuando esta hoja vive en el bundle global. */
+    body.login-page {
+      height: 100%;
+      margin: 0; overflow: hidden;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--ink);
+    }
+    /* En React el contenido del login vive dentro de #root: el centrado (y el
+       ancho real de la tarjeta) van aquí, no en el body. Si el flex se pone en
+       el body, #root se encoge al contenido y la tarjeta queda más angosta. */
+    body.login-page #root {
+      width: 100%; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ===== Fondo: red de nodos (canvas) + manchas de luz ===== */
+    /* Canvas a pantalla completa, detrás de todo. */
+    .node-net {
+      position: fixed; inset: 0; z-index: -2; pointer-events: none;
+      display: block; width: 100%; height: 100%;
+    }
+    /* Manchas de luz difuminadas, fijas, encima del canvas pero detrás del contenido. */
+    .bg-glow {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(60vw 60vh at 15% 8%,  rgba(0,224,255,.14), transparent 60%),
+        radial-gradient(60vw 60vh at 85% 12%, rgba(123,92,255,.16), transparent 60%),
+        radial-gradient(70vw 55vh at 50% 100%, rgba(74,168,255,.10), transparent 60%);
+    }
+
+    /* ===== Tarjeta de vidrio (glassmorphism) ===== */
+    .stage { position: relative; z-index: 1; width: 100%; max-width: 410px; padding: 1.25rem; }
+    .login-card {
+      position: relative;
+      background: rgba(255,255,255,.04);
+      backdrop-filter: blur(14px) saturate(135%);
+      -webkit-backdrop-filter: blur(14px) saturate(135%);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 18px;
+      padding: 2.75rem 2rem 2rem;
+      box-shadow: 0 30px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    /* ===== Logo ===== */
+    .logo-ring {
+      width: 116px; height: 116px; margin: -84px auto 1rem;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 35%, #10203f, #05070f);
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(0,224,255,.35);
+      box-shadow: 0 0 0 6px rgba(5,7,15,.7), 0 0 35px rgba(0,224,255,.45);
+      overflow: hidden; animation: pulse 3.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 6px rgba(5,7,15,.7), 0 0 28px rgba(0,224,255,.35); }
+      50%     { box-shadow: 0 0 0 6px rgba(5,7,15,.7), 0 0 48px rgba(0,224,255,.65); }
+    }
+    .logo-ring img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .logo-ring .fallback { font-size: 3.2rem; color: var(--cyan); }
+
+    .brand {
+      text-align: center; font-weight: 800; font-size: 1.75rem; letter-spacing: 3px;
+      color: var(--text); margin-bottom: .15rem;
+    }
+    .brand .accent { color: var(--cyan); text-shadow: 0 0 16px rgba(0,224,255,.55); }
+    .sub {
+      text-align: center; color: #8aa2c4; font-size: .72rem; letter-spacing: 3px;
+      text-transform: uppercase; margin-bottom: 1.8rem;
+    }
+
+    .field-label { font-size: .78rem; letter-spacing: 1px; text-transform: uppercase; color: #9fb4d6; margin-bottom: .4rem; display: block; }
+    .field {
+      display: flex; align-items: center; gap: .65rem;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: .65rem; padding: .7rem .85rem; transition: all .18s ease;
+    }
+    .field:focus-within {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(0,224,255,.18), 0 0 18px rgba(0,224,255,.25);
+      background: rgba(0,224,255,.06);
+    }
+    .field i { color: #7f9cc4; font-size: 1.05rem; }
+    .field input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text); font-size: .98rem;
+    }
+    .field input::placeholder { color: #5c7297; }
+    /* Anula el fondo claro que Chrome/Edge ponen al autocompletar */
+    .field input:-webkit-autofill,
+    .field input:-webkit-autofill:hover,
+    .field input:-webkit-autofill:focus,
+    .field input:-webkit-autofill:active {
+      -webkit-text-fill-color: var(--text) !important;
+      caret-color: var(--text);
+      -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+      transition: background-color 600000s 0s, color 600000s 0s;
+    }
+    .field input:autofill { -webkit-text-fill-color: var(--text); }
+    .field .toggle { cursor: pointer; color: #7f9cc4; }
+    .field .toggle:hover { color: var(--cyan); }
+
+    .err {
+      display: none; align-items: center; gap: .5rem;
+      background: rgba(220,53,69,.12); border: 1px solid rgba(220,53,69,.4);
+      color: #ffb3bb; border-radius: .55rem; padding: .55rem .75rem; font-size: .88rem; margin-bottom: 1rem;
+    }
+    .err.show { display: flex; }
+
+    .btn-login {
+      position: relative; overflow: hidden;
+      width: 100%; border: none; border-radius: .7rem; cursor: pointer;
+      padding: .8rem; font-weight: 700; letter-spacing: .5px; color: #fff;
+      background: linear-gradient(90deg, #2563eb, #38bdf8, #2563eb);
+      background-size: 220% 100%; background-position: 0% 0;
+      box-shadow: 0 10px 24px rgba(37,99,235,.45), 0 0 0 1px rgba(255,255,255,.05) inset;
+      transition: transform .12s ease, box-shadow .2s ease, filter .2s ease, background-position .6s ease;
+    }
+    /* destello que cruza horizontalmente al pasar el mouse */
+    .btn-login::after {
+      content: ""; position: absolute; top: 0; left: -130%; width: 55%; height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255,255,255,.5), transparent);
+      transform: skewX(-20deg); transition: left .6s ease; pointer-events: none;
+    }
+    .btn-login:hover:not(:disabled) {
+      filter: brightness(1.08); transform: translateY(-1px);
+      box-shadow: 0 14px 32px rgba(56,189,248,.55);
+      background-position: 100% 0;
+    }
+    .btn-login:hover:not(:disabled)::after { left: 135%; }
+    .btn-login:active:not(:disabled) { transform: translateY(0); }
+    .btn-login:disabled { opacity: .75; cursor: default; }
+
+    .foot { text-align: center; color: #5f769a; font-size: .72rem; letter-spacing: 1px; margin-top: 1.5rem; }
+    .foot .dot { color: var(--cyan); }

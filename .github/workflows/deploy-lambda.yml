@@ -1,0 +1,47 @@
+# Actualiza la función Lambda del BFF en cada push que toque server/.
+# El front (dist/) lo redepliega Amplify por su cuenta; esto es solo el BFF.
+name: Deploy BFF Lambda
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'server/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-lambda.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci || npm install
+
+      - name: Build Lambda bundle
+        run: npm run build:lambda
+
+      - name: Zip bundle
+        run: |
+          cd lambda
+          zip -r ../lambda.zip index.cjs
+          cd ..
+
+      - name: Update Lambda function code
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws lambda update-function-code \
+            --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            --zip-file fileb://lambda.zip \
+            --publish
