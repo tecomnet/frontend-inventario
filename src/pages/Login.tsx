@@ -54,7 +54,7 @@ export default function Login() {
   return (
     <>
       <NodeNetwork />
-      <div className="bg-glow" />
+      {/* <div className="bg-glow" /> */}
 
       <div className="stage">
         <div className="login-card">
