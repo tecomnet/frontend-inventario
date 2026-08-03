@@ -131,6 +131,24 @@ del BFF. Se conservó toda la funcionalidad del panel original.
 
 ---
 
+## Sistema de diseño
+
+Misma capa visual que el panel WebAdmin, en [`src/styles/admin.css`](./src/styles/admin.css)
+(panel) y [`src/styles/login.css`](./src/styles/login.css) (login, *scoped* a `.login-page`).
+
+- **Tipografía:** [Lato](https://fonts.google.com/specimen/Lato) (Google Fonts), aplicada a
+  todo el panel vía la variable `--tec-font` y `--bs-body-font-family` (para que también la
+  usen los componentes de Bootstrap).
+- **Chrome del panel:** sidebar oscuro (degradado navy) con el logo `logo1.png`, grupos
+  colapsables e ítems con estado activo; contenido en tema claro. Toggle del menú tipo
+  "pestaña" en el borde del sidebar.
+- **Tarjetas** (`.table-card`, `.form-card`, `.kpi-card`, `.dash-card`): radio 14px, sombra en
+  capas y elevación al hover. Tablas con encabezado claro y paginación estilizada.
+- **Login:** fondo oscuro con red de nodos animada en `<canvas>` ([`NodeNetwork`](./src/components/NodeNetwork.tsx),
+  respeta `prefers-reduced-motion`), tarjeta *glassmorphism* y logotipo TECOMNET.
+
+---
+
 ## Autenticación
 
 La API de Inventario **todavía no tiene endpoint de login**. Por eso el BFF corre en
