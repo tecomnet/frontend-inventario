@@ -14,10 +14,10 @@ Navegador ── https://<tu-app>.amplifyapp.com ─┬─ /            → inde
                                                                                     (https://tecomnet.net/Inventario/api)
 ```
 
-La autenticación aún no existe en la API de Inventario. El BFF arranca en modo
-`AUTH_MODE=placeholder`: la pantalla de login acepta cualquier credencial y crea
-sesión. Cuando exista el endpoint real, cambia a `AUTH_MODE=api` y define
-`AUTH_LOGIN_PATH` (ver paso 2.7).
+El login valida usuario y contraseña contra `POST /api/Auth/login` de la API de
+Inventario. El Lambda **siempre** corre como producción (`server/production.ts`):
+no existe forma de entrar sin credenciales válidas y `SESSION_SECRET` es
+obligatorio (si falta, la función no arranca).
 
 ---
 
@@ -57,9 +57,7 @@ sesión. Cuando exista el endpoint real, cambia a `AUTH_MODE=api` y define
 | `API_TIMEOUT` | `30` | Segundos. |
 | `SESSION_SECRET` | *(secreto largo aleatorio)* | Firma la cookie de sesión. **Obligatorio en prod.** |
 | `SESSION_TIMEOUT` | `600` | Inactividad de sesión (segundos). |
-| `AUTH_MODE` | `placeholder` | `placeholder` = login abierto (aún sin auth). Cambia a `api` cuando exista. |
-| `AUTH_LOGIN_PATH` | `/Auth/Login` | Solo se usa con `AUTH_MODE=api`. |
-| `NODE_ENV` | `production` | Hace obligatorio `SESSION_SECRET`. |
+| `AUTH_LOGIN_PATH` | `/Auth/login` | Opcional. Ruta del login relativa a `API_BASE`. |
 
 Genera el `SESSION_SECRET`:
 ```bash

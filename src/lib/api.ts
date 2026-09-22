@@ -79,11 +79,11 @@ export interface Usuario {
 export const Auth = {
   check: () =>
     getJSON<{ authenticated: boolean; user: Usuario | null }>(`${API}/auth?action=check`),
-  login: (Email: string, Password: string) =>
+  login: (Username: string, Password: string) =>
     sendJSONStatus<{ ok: boolean; mensaje?: string }>(
       'POST',
       `${API}/auth?action=login`,
-      { Email, Password },
+      { Username, Password },
     ),
   logout: () => fetch(`${API}/auth?action=logout`, { credentials: 'same-origin' }),
 };
