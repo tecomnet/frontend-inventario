@@ -2,7 +2,7 @@
 // El BFF valida usuario y contraseña contra POST /api/Auth/login de la API y
 // guarda el token en la cookie de sesión (el navegador nunca lo ve).
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Auth } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import NodeNetwork from '../components/NodeNetwork';
@@ -10,11 +10,15 @@ import '../styles/login.css';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { reload } = useAuth();
+  // Motivo por el que se llegó aquí (sesión expirada / token vencido), puesto
+  // por AuthContext al redirigir desde una ruta del panel.
+  const aviso = (location.state as { mensaje?: string } | null)?.mensaje ?? '';
   const [username, setUsername] = useState('');
   const [pass, setPass] = useState('');
   const [showPass, setShowPass] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(aviso);
   const [loading, setLoading] = useState(false);
 
   // Marca el body para activar el fondo oscuro de login.css (scoped).
@@ -22,6 +26,15 @@ export default function Login() {
     document.body.classList.add('login-page');
     return () => document.body.classList.remove('login-page');
   }, []);
+
+  // El aviso se muestra una sola vez: se limpia del historial para que no
+  // reaparezca al recargar o al volver atrás. Solo se borra "usr" (el state de
+  // React Router); el resto de la entrada del historial se conserva.
+  useEffect(() => {
+    if (!aviso) return;
+    const h = window.history.state as Record<string, unknown> | null;
+    window.history.replaceState({ ...h, usr: null }, '');
+  }, [aviso]);
 
   // Si ya hay sesión, ir directo al panel.
   useEffect(() => {

@@ -2,7 +2,11 @@
 //  Cliente HTTP server-side hacia la API de Inventario.
 //  Es un proxy simple: reenvía método, ruta, query y cuerpo tal cual
 //  (JSON o multipart para los importadores) y devuelve la respuesta.
-//  Si hay sesión, agrega el token de la API (Authorization: Bearer).
+//
+//  La API NO es abierta: desde KL-7 tiene FallbackPolicy y exige un JWT en
+//  todos sus endpoints (salvo el login). Por eso toda llamada hecha con la
+//  sesión del panel lleva Authorization: Bearer <token>; el token sale de la
+//  cookie de sesión (ver session.ts) y solo lo conoce el servidor.
 // ============================================================
 import { API_BASE, API_TIMEOUT } from './config.js';
 
@@ -58,7 +62,10 @@ export async function apiProxy(
       body: text,
       contentType: res.headers.get('content-type') ?? 'application/json',
     };
-  } catch {
+  } catch (err) {
+    // Red caída, DNS, timeout…: se reporta code 0 y el BFF responde 502.
+    // Se deja traza en el log del servidor (CloudWatch en Lambda).
+    console.error('[BFF] fallo al llamar a la API:', `${API_BASE}${path}`, err);
     return { code: 0, body: '', contentType: 'application/json' };
   }
 }

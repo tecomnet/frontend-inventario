@@ -3,7 +3,13 @@
 //    /api/auth      login / logout / check (sesión del panel)
 //    /api/*         proxy genérico hacia la API de Inventario
 //  El navegador siempre habla con el mismo origen; el BFF reenvía
-//  cada petición (incluidas las multipart de los importadores).
+//  cada petición (incluidas las multipart de los importadores) con el
+//  Authorization: Bearer de la sesión, que la API exige desde KL-7.
+//
+//  Los tres casos de error de autorización se responden distintos:
+//    401 sin-sesion      -> no hay sesión de panel (401 propio del BFF).
+//    401 token-expirado  -> la API rechazó el token: se cierra la sesión.
+//    403 sinPermiso      -> falta permiso: la sesión NO se toca.
 // ============================================================
 import express, { type Request, type Response } from 'express';
 import cookieParser from 'cookie-parser';
@@ -36,11 +42,30 @@ export function createApp() {
     }
   };
 
+  // Saca un mensaje legible del cuerpo de error de la API (si viene en JSON).
+  const mensajeApi = (body: string): string | null => {
+    try {
+      const d = JSON.parse(body) as Record<string, unknown>;
+      const m = [d.mensaje, d.error, d.title, d.detail]
+        .find((x) => typeof x === 'string' && x.trim() !== '');
+      return (m as string | undefined) ?? null;
+    } catch {
+      return null;
+    }
+  };
+
   // Exige una sesión de panel válida. Devuelve la sesión o responde 401.
+  // Este es el 401 *del BFF*: no hay sesión del panel (nunca inició o la cookie
+  // expiró por inactividad). Es distinto del 401 *de la API* (token vencido),
+  // que se maneja abajo en el proxy; el front los diferencia por "motivo".
   const requireAuth = (req: Request, res: Response): Sesion | null => {
     const sesion = getSession(req);
     if (!sesion) {
-      res.status(401).json({ error: 'Sesión expirada o no autenticado', login: true });
+      res.status(401).json({
+        error: 'Tu sesión expiró por inactividad. Vuelve a iniciar sesión.',
+        login: true,
+        motivo: 'sin-sesion',
+      });
       return null;
     }
     setSession(req, res, sesion); // navegar/usar el panel cuenta como actividad
@@ -124,6 +149,18 @@ export function createApp() {
     const sesion = requireAuth(req, res);
     if (!sesion) return;
 
+    // La API exige JWT en todos sus endpoints (KL-7). Una sesión sin token no
+    // sirve para hablar con ella (p. ej. se creó en modo placeholder y el BFF
+    // reinició en modo api): se cierra y se manda al login como token vencido.
+    if (AUTH_MODE === 'api' && !sesion.token) {
+      clearSession(req, res);
+      return res.status(401).json({
+        error: 'Tu sesión ya no es válida. Vuelve a iniciar sesión.',
+        login: true,
+        motivo: 'token-expirado',
+      });
+    }
+
     // originalUrl = "/api/Productos?x=1" -> path = "/Productos?x=1"
     const path = req.originalUrl.replace(/^\/api/, '') || '/';
     const method = req.method;
@@ -141,11 +178,26 @@ export function createApp() {
       sesion.token,
     );
 
-    // La API rechazó el token (expiró o es inválido): se cierra la sesión del
-    // panel para que el front vuelva a /login en lugar de quedar en un ciclo.
+    // 401 *de la API*: rechazó el token (expiró o es inválido). Se cierra la
+    // sesión del panel para que el front mande al login UNA vez, con aviso, en
+    // lugar de reintentar contra un token muerto y quedar en un ciclo.
     if (code === 401) {
       clearSession(req, res);
-      return res.status(401).json({ error: 'Sesión expirada o no autenticado', login: true });
+      return res.status(401).json({
+        error: 'Tu sesión expiró. Vuelve a iniciar sesión.',
+        login: true,
+        motivo: 'token-expirado',
+      });
+    }
+
+    // 403 de la API: el token es válido pero el rol no alcanza para esta
+    // operación. NO es sesión expirada: la sesión se conserva y el front solo
+    // muestra un aviso de "sin permiso".
+    if (code === 403) {
+      const msg = mensajeApi(resp) ?? 'No tienes permiso para realizar esta acción.';
+      // El mensaje va en "error" y en "title": esa es la clave que ya leen las
+      // pantallas al reportar un guardado fallido.
+      return res.status(403).json({ error: msg, title: msg, sinPermiso: true });
     }
 
     res

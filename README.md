@@ -54,7 +54,8 @@ Navegador ── https://…amplifyapp.com ─┬─ /            → index.html
 
 **Por qué un BFF (y no llamar la API directo):**
 - El navegador nunca toca otro dominio → sin problemas de CORS.
-- Punto único para la sesión del panel (cookie httpOnly) y, a futuro, el login real.
+- Punto único para el login real, la sesión del panel (cookie httpOnly) y el token
+  JWT que la API exige en cada llamada.
 - La URL de la API vive como variable de entorno del Lambda, no en el front.
 
 ---
@@ -72,7 +73,7 @@ Inventario/
 ├── public/img/                # Logos (Mundo2.png, LetrasTecomnet.png, logo1.png…)
 ├── server/                    # BFF (Express) — se empaqueta como Lambda
 │   ├── app.ts                 # Rutas: /api/auth y proxy genérico /api/*
-│   ├── apiClient.ts           # Proxy HTTP hacia la API de Inventario
+│   ├── apiClient.ts           # Proxy HTTP hacia la API (inyecta Authorization: Bearer)
 │   ├── session.ts             # Sesión del panel (cookie JWT)
 │   ├── config.ts              # Config desde variables de entorno
 │   ├── env.ts                 # Carga .env en local
@@ -151,20 +152,42 @@ Misma capa visual que el panel WebAdmin, en [`src/styles/admin.css`](./src/style
 
 ## Autenticación
 
-El login manda `{ Username, Password }` al BFF, que lo valida contra
-`POST /api/Auth/login` de la API de Inventario. Si la API responde 2xx con
-`{ token }`, el BFF crea la sesión; si no, devuelve el `mensaje` de la API y no
-crea sesión. Ver [`server/app.ts`](./server/app.ts).
+**La API de Inventario no es abierta.** Desde KL-7 tiene `FallbackPolicy` y exige un
+JWT en todos sus endpoints salvo el login, así que **cada** petición que el BFF reenvía
+lleva `Authorization: Bearer <token>` ([`server/apiClient.ts`](./server/apiClient.ts)).
 
-- La sesión es una cookie JWT **httpOnly** firmada que expira por inactividad
-  (`SESSION_TIMEOUT`, 10 min en el front).
+**Login.** El front manda `{ Username, Password }` a `POST /api/auth?action=login`; el
+BFF lo valida contra `AUTH_LOGIN_PATH` (`/Auth/login`) de la API. Si la API responde 2xx
+con `{ token }`, el BFF crea la sesión y devuelve solo `{ ok: true }`; si no, devuelve el
+`mensaje` de la API y no crea sesión. Ver [`server/app.ts`](./server/app.ts).
+
+**Sesión del panel.**
+- Es una cookie JWT **httpOnly** firmada, que expira por inactividad (`SESSION_TIMEOUT`;
+  el front además cierra sesión a los 10 min sin actividad) y se renueva en cada petición
+  válida.
 - El token de la API viaja **cifrado** (AES-256-GCM) dentro de esa cookie
   ([`server/session.ts`](./server/session.ts)). El navegador nunca lo ve: no está en
-  `localStorage`, en `document.cookie` ni en las respuestas del BFF.
-- El proxy agrega `Authorization: Bearer <token>` a cada llamada a la API. Si la API
-  responde 401 (token vencido), el BFF cierra la sesión y el front vuelve a `/login`.
-- `AUTH_MODE=placeholder` (acepta cualquier credencial) solo funciona en desarrollo
-  local. Con `NODE_ENV=production`, y siempre en el Lambda, se ignora.
+  `localStorage`, ni en `document.cookie`, ni en las respuestas del BFF.
+
+**Los tres errores de autorización** se responden distinto, para que el front no confunda
+"falta permiso" con "sesión caída":
+
+| Caso | Respuesta del BFF | Qué hace el front |
+|---|---|---|
+| No hay sesión del panel (401 **del BFF**) | `401 { login: true, motivo: 'sin-sesion' }` | Va a `/login` con el aviso. |
+| La API rechaza el token — vencido o inválido (401 **de la API**) | `401 { login: true, motivo: 'token-expirado' }`, y el BFF **borra la cookie** | Va a `/login` con el aviso. |
+| La API responde **403** (el rol no alcanza) | `403 { error, title, sinPermiso: true }`; la sesión **no se toca** | Muestra un aviso y se queda en la pantalla. |
+
+El aviso de sesión caída se dispara **una sola vez** aunque varias peticiones de la misma
+pantalla devuelvan 401 a la vez ([`src/lib/api.ts`](./src/lib/api.ts)): por eso un token
+vencido lleva al login una sola vez y no en ciclo. El aviso de 403 es solo para las
+**lecturas**: en una escritura la pantalla ya reporta el fallo por su cuenta y saldrían
+dos avisos por lo mismo.
+
+**Modo placeholder.** `AUTH_MODE=placeholder` (acepta cualquier credencial y crea sesión
+sin token) solo funciona en desarrollo local; con `NODE_ENV=production`, y siempre en el
+Lambda, se ignora. Si una sesión sin token llega al proxy en modo `api`, se cierra y se
+manda al login como token vencido.
 
 ---
 
