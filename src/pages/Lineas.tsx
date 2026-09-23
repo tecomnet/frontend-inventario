@@ -1,9 +1,11 @@
 // Administración de Líneas (alta, edición). Sin baja.
 // Equivale a getLineas / renderLineaForm / guardarLinea del panel viejo.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
-import { API, getJSON, sendJSONStatus } from '../lib/api';
+import { API, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
 interface Linea {
@@ -17,24 +19,11 @@ const vacio: Linea = { id: 0, descripcion: '', idLineaPadre: 0, esActiva: true }
 
 export default function Lineas() {
   const { notify } = useUI();
-  const [items, setItems] = useState<Linea[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
+  const listado = useListadoPaginado<Linea>(`${API}/Catalogos/lineas`);
+  const { items, estado } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Linea>(vacio);
   const [guardando, setGuardando] = useState(false);
-
-  const cargar = async () => {
-    setEstado('cargando');
-    try {
-      const data = await getJSON<Linea[]>(`${API}/Catalogos/lineas`);
-      setItems(Array.isArray(data) ? data : []);
-      setEstado('ok');
-    } catch {
-      setEstado('error');
-    }
-  };
-
-  useEffect(() => { void cargar(); }, []);
 
   const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (l: Linea) => { setForm({ ...l }); setVista('form'); window.scrollTo(0, 0); };
@@ -62,7 +51,7 @@ export default function Lineas() {
         return;
       }
       notify(isEdit ? 'Línea actualizada.' : 'Línea creada.', 'success');
-      await cargar();
+      await listado.recargar();
       setVista('lista');
     } catch (err) {
       notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
@@ -108,6 +97,13 @@ export default function Lineas() {
               </table>
             </div>
           </div>
+
+          <Paginacion
+            page={listado.page} pageSize={listado.pageSize}
+            totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+            onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+            etiqueta="líneas"
+          />
         </>
       ) : (
         <>
