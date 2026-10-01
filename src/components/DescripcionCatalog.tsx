@@ -1,6 +1,6 @@
 // Catálogo genérico de un solo campo "descripcion" (Marcas, Presentaciones,
 // Unidades de Medida). Lista + formulario de alta/edición contra un endpoint
-// que expone GET/POST/PUT sobre { id, descripcion }.
+// que expone GET/POST sobre la URL y PUT sobre {url}/{id} con { id, descripcion }.
 import { useState } from 'react';
 import AppLayout from './AppLayout';
 import Paginacion from './Paginacion';
@@ -40,7 +40,7 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
     const payload = isEdit ? { id: editingId, descripcion: d } : { descripcion: d };
     setGuardando(true);
     try {
-      const { ok, status } = await sendJSONStatus(isEdit ? 'PUT' : 'POST', url, payload);
+      const { ok, status } = await sendJSONStatus(isEdit ? 'PUT' : 'POST', isEdit ? `${url}/${editingId}` : url, payload);
       if (!ok) throw new Error('HTTP ' + status);
       notify(isEdit ? `${singular} actualizada.` : `${singular} creada.`, 'success');
       await listado.recargar();
