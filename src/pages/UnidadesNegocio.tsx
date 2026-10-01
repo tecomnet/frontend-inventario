@@ -1,47 +1,41 @@
 // Administración de Unidades de Negocio (alta, edición, baja).
 // Equivale a getUnidadesNegocio / renderUdnForm / guardarUdn / bajaUdn del panel viejo.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
 import { usePermisos } from '../hooks/usePermisos';
-import { API, getJSON, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
+// La API lista con id/empresaId y el PUT recibe idUdn/idEmpresa; el
+// formulario trabaja con los nombres del PUT y acepta los dos al leer.
 interface Udn {
   idUdn: number;
   id?: number;
   descripcion?: string;
   idEmpresa?: number;
+  empresaId?: number;
   esActiva?: boolean;
 }
+
+const empresaDe = (u: Udn) => u.idEmpresa ?? u.empresaId ?? 0;
 
 const vacio: Udn = { idUdn: 0, descripcion: '', idEmpresa: 0, esActiva: true };
 
 export default function UnidadesNegocio() {
   const { notify } = useUI();
   const { puedeEscribir } = usePermisos();
-  const [items, setItems] = useState<Udn[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
+  const listado = useListadoPaginado<Udn>(`${API}/Catalogos/unidadesnegocio`);
+  const { items, estado } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Udn>(vacio);
   const [guardando, setGuardando] = useState(false);
 
-  const cargar = async () => {
-    setEstado('cargando');
-    try {
-      const data = await getJSON<Udn[]>(`${API}/Catalogos/unidadesnegocio`);
-      setItems(Array.isArray(data) ? data : []);
-      setEstado('ok');
-    } catch {
-      setEstado('error');
-    }
-  };
-
-  useEffect(() => { void cargar(); }, []);
-
   const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (u: Udn) => {
-    setForm({ ...u, idUdn: u.idUdn ?? u.id ?? 0 });
+    setForm({ ...u, idUdn: u.idUdn ?? u.id ?? 0, idEmpresa: empresaDe(u) });
     setVista('form'); window.scrollTo(0, 0);
   };
 
@@ -61,7 +55,7 @@ export default function UnidadesNegocio() {
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Catalogos/unidadesnegocio`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/unidadesnegocio/${idUdn}` : `${API}/Catalogos/unidadesnegocio`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
@@ -69,7 +63,7 @@ export default function UnidadesNegocio() {
         return;
       }
       notify(isEdit ? 'UDN actualizada.' : 'UDN creada.', 'success');
-      await cargar();
+      await listado.recargar();
       setVista('lista');
     } catch (err) {
       notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
@@ -81,12 +75,12 @@ export default function UnidadesNegocio() {
   const baja = async (idUdn: number) => {
     if (!window.confirm(`¿Dar de baja la UDN ${idUdn}?`)) return;
     try {
-      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Catalogos/unidadesnegocio`, { idUdn });
+      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Catalogos/unidadesnegocio/${idUdn}`);
       const aviso = avisoSinPermiso(status, data);
       if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify('UDN dada de baja.', 'success');
-      await cargar();
+      await listado.recargar();
     } catch {
       notify('No se pudo dar de baja la UDN. Revisa el API.', 'danger');
     }
@@ -120,7 +114,7 @@ export default function UnidadesNegocio() {
                     const id = u.idUdn ?? u.id ?? 0;
                     return (
                       <tr key={id}>
-                        <td>{id}</td><td>{u.descripcion}</td><td>{u.idEmpresa}</td><td>{siNo(u.esActiva)}</td>
+                        <td>{id}</td><td>{u.descripcion}</td><td>{empresaDe(u)}</td><td>{siNo(u.esActiva)}</td>
                         {puedeEscribir && <td className="text-end">
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(u)}><i className="bi bi-pencil" /></button>
                           <button className="action-btn disable" title="Dar de baja" onClick={() => baja(id)}><i className="bi bi-slash-circle" /></button>
@@ -132,6 +126,13 @@ export default function UnidadesNegocio() {
               </table>
             </div>
           </div>
+
+          <Paginacion
+            page={listado.page} pageSize={listado.pageSize}
+            totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+            onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+            etiqueta="unidades de negocio"
+          />
         </>
       ) : (
         <>

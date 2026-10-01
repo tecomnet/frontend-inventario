@@ -6,7 +6,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import AppLayout from '../components/AppLayout';
-import { API, getJSON } from '../lib/api';
+import { API } from '../lib/api';
+import { PAGE_SIZE_MAX, getPaged } from '../lib/paged';
 
 interface Producto { id: number; descripcion?: string; iva?: number | string; ieps?: number | string }
 
@@ -15,13 +16,16 @@ const DONA = ['#10b981', '#f59e0b', '#64748b'];
 
 export default function Inicio() {
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [totalProductos, setTotalProductos] = useState(0);
   const [cargando, setCargando] = useState(true);
 
+  // El tablero no pagina: pide de una sola vez el máximo que acepta la API
+  // (100) para las gráficas, y el conteo exacto sale de totalRecords.
   useEffect(() => {
     let vivo = true;
-    getJSON<Producto[]>(`${API}/Productos`)
-      .then((d) => { if (vivo) setProductos(Array.isArray(d) ? d : []); })
-      .catch(() => { if (vivo) setProductos([]); })
+    getPaged<Producto>(`${API}/Productos`, { page: 1, pageSize: PAGE_SIZE_MAX })
+      .then((r) => { if (vivo) { setProductos(r.data); setTotalProductos(r.totalRecords); } })
+      .catch(() => { if (vivo) { setProductos([]); setTotalProductos(0); } })
       .finally(() => { if (vivo) setCargando(false); });
     return () => { vivo = false; };
   }, []);
@@ -40,10 +44,14 @@ export default function Inicio() {
     { name: 'Sin impuestos', value: productos.filter((p) => !Number(p.iva) && !Number(p.ieps)).length },
   ], [productos, conIva, conIeps]);
 
-  const kpis = [
-    { icon: 'bi-box-seam', color: '#1D4ED8', label: 'Total Productos', value: productos.length },
-    { icon: 'bi-receipt', color: '#10b981', label: 'Productos con IVA', value: conIva },
-    { icon: 'bi-cash-coin', color: '#f59e0b', label: 'Productos con IEPS', value: conIeps },
+  // Los conteos por impuesto se calculan sobre los productos traídos (hasta 100),
+  // no sobre el catálogo completo: la API no expone agregados. Se etiqueta para
+  // que el número no se lea como total.
+  const muestra = productos.length;
+  const kpis: { icon: string; color: string; label: string; value: number; nota?: string }[] = [
+    { icon: 'bi-box-seam', color: '#1D4ED8', label: 'Total Productos', value: totalProductos },
+    { icon: 'bi-receipt', color: '#10b981', label: 'Productos con IVA', value: conIva, nota: `de los primeros ${muestra}` },
+    { icon: 'bi-cash-coin', color: '#f59e0b', label: 'Productos con IEPS', value: conIeps, nota: `de los primeros ${muestra}` },
   ];
 
   return (
@@ -68,6 +76,7 @@ export default function Inicio() {
                     : k.value.toLocaleString('es-MX')}
                 </div>
                 <div className="kpi-label">{k.label}</div>
+                {k.nota && !cargando && <div className="kpi-hint">{k.nota}</div>}
               </div>
             </div>
           </div>
@@ -98,7 +107,7 @@ export default function Inicio() {
 
           <div className="col-12 col-xl-5">
             <div className="dash-card">
-              <div className="dash-card-title">Impuestos</div>
+              <div className="dash-card-title">Impuestos (primeros {muestra})</div>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie data={impuestos} dataKey="value" nameKey="name" innerRadius={65} outerRadius={100} paddingAngle={2}

@@ -1,11 +1,13 @@
 // Catálogo genérico de un solo campo "descripcion" (Marcas, Presentaciones,
 // Unidades de Medida). Lista + formulario de alta/edición contra un endpoint
-// que expone GET/POST/PUT sobre { id, descripcion }.
-import { useEffect, useState } from 'react';
+// que expone GET/POST sobre la URL y PUT sobre {url}/{id} con { id, descripcion }.
+import { useState } from 'react';
 import AppLayout from './AppLayout';
+import Paginacion from './Paginacion';
 import { useUI } from '../context/UIContext';
 import { usePermisos } from '../hooks/usePermisos';
-import { getJSON, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 
 interface Item { id: number; descripcion?: string }
 
@@ -19,29 +21,13 @@ interface Props {
 export default function DescripcionCatalog({ active, titulo, singular, url }: Props) {
   const { notify } = useUI();
   const { puedeEscribir } = usePermisos();
-  const [items, setItems] = useState<Item[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
-  const [errMsg, setErrMsg] = useState('');
+  const listado = useListadoPaginado<Item>(url);
+  const { items, estado, errMsg } = listado;
 
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [desc, setDesc] = useState('');
   const [guardando, setGuardando] = useState(false);
-
-  const cargar = async () => {
-    setEstado('cargando');
-    try {
-      const data = await getJSON<Item[]>(url);
-      setItems(Array.isArray(data) ? data : []);
-      setEstado('ok');
-    } catch (err) {
-      setErrMsg(err instanceof Error ? err.message : 'error');
-      setEstado('error');
-    }
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void cargar(); }, [url]);
 
   const abrirAlta = () => { setEditingId(null); setDesc(''); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (c: Item) => {
@@ -56,12 +42,12 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
     const payload = isEdit ? { id: editingId, descripcion: d } : { descripcion: d };
     setGuardando(true);
     try {
-      const { ok, status, data } = await sendJSONStatus(isEdit ? 'PUT' : 'POST', url, payload);
+      const { ok, status, data } = await sendJSONStatus(isEdit ? 'PUT' : 'POST', isEdit ? `${url}/${editingId}` : url, payload);
       const aviso = avisoSinPermiso(status, data);
       if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify(isEdit ? `${singular} actualizada.` : `${singular} creada.`, 'success');
-      await cargar();
+      await listado.recargar();
       setVista('lista'); setEditingId(null);
     } catch (err) {
       notify('No se pudo guardar: ' + (err instanceof Error ? err.message : ''), 'danger');
@@ -119,6 +105,13 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
               </table>
             </div>
           </div>
+
+          <Paginacion
+            page={listado.page} pageSize={listado.pageSize}
+            totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+            onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+            etiqueta={titulo.toLowerCase()}
+          />
         </>
       ) : (
         <>

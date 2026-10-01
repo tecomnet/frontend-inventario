@@ -1,17 +1,19 @@
 // Administración de Proveedores (alta, edición). Sin baja.
 // Equivale a getProveedores / renderProveedorForm / guardarProveedor del panel viejo.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
 import { usePermisos } from '../hooks/usePermisos';
-import { API, getJSON, sendJSONStatus } from '../lib/api';
+import { API, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
 interface Proveedor {
   id: number;
   descripcion?: string;
-  contacto?: string;
-  diasCredito?: number;
+  contacto?: string | null;
+  diasCredito?: number | null;
   esActivo?: boolean;
 }
 
@@ -20,24 +22,11 @@ const vacio: Proveedor = { id: 0, descripcion: '', contacto: '', diasCredito: 0,
 export default function Proveedores() {
   const { notify } = useUI();
   const { puedeEscribir } = usePermisos();
-  const [items, setItems] = useState<Proveedor[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
+  const listado = useListadoPaginado<Proveedor>(`${API}/Catalogos/proveedores`);
+  const { items, estado } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Proveedor>(vacio);
   const [guardando, setGuardando] = useState(false);
-
-  const cargar = async () => {
-    setEstado('cargando');
-    try {
-      const data = await getJSON<Proveedor[]>(`${API}/Catalogos/proveedores`);
-      setItems(Array.isArray(data) ? data : []);
-      setEstado('ok');
-    } catch {
-      setEstado('error');
-    }
-  };
-
-  useEffect(() => { void cargar(); }, []);
 
   const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (p: Proveedor) => { setForm({ ...p }); setVista('form'); window.scrollTo(0, 0); };
@@ -50,15 +39,17 @@ export default function Proveedores() {
     const isEdit = (form.id ?? 0) > 0;
     const base = {
       descripcion: (form.descripcion ?? '').trim(),
-      contacto: (form.contacto ?? '').trim(),
-      diasCredito: form.diasCredito ?? 0,
+      // Opcionales en la API: vacío viaja como null para no convertir un null
+      // guardado en '' o 0 al editar (el PUT reemplaza el registro completo).
+      contacto: (form.contacto ?? '').trim() || null,
+      diasCredito: form.diasCredito ?? null,
       esActivo: form.esActivo ?? true,
     };
     const payload = isEdit ? { id: form.id ?? 0, ...base } : base;
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Catalogos/proveedores`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/proveedores/${form.id}` : `${API}/Catalogos/proveedores`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
@@ -66,7 +57,7 @@ export default function Proveedores() {
         return;
       }
       notify(isEdit ? 'Proveedor actualizado.' : 'Proveedor creado.', 'success');
-      await cargar();
+      await listado.recargar();
       setVista('lista');
     } catch (err) {
       notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
@@ -113,6 +104,13 @@ export default function Proveedores() {
               </table>
             </div>
           </div>
+
+          <Paginacion
+            page={listado.page} pageSize={listado.pageSize}
+            totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+            onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+            etiqueta="proveedores"
+          />
         </>
       ) : (
         <>
@@ -125,7 +123,7 @@ export default function Proveedores() {
                 <div className="form-group"><label>Contacto</label>
                   <input type="text" value={form.contacto ?? ''} onChange={(e) => set('contacto', e.target.value)} /></div>
                 <div className="form-group"><label>Días Crédito</label>
-                  <input type="number" min={0} step={1} value={form.diasCredito ?? 0} onChange={(e) => set('diasCredito', num(e.target.value))} required /></div>
+                  <input type="number" min={0} step={1} value={form.diasCredito ?? ''} onChange={(e) => set('diasCredito', e.target.value === '' ? null : num(e.target.value))} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActivo ?? true} onChange={(e) => set('esActivo', e.target.checked)} /> Activo</label>
               </div>
             </form>

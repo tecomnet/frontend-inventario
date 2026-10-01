@@ -1,23 +1,34 @@
 // Administración de Sims (listado paginado del servidor + edición de fechas/estado).
 // Equivale a getSims / editarSim / guardarSim del panel viejo.
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
 import { usePermisos } from '../hooks/usePermisos';
-import { API, getJSON, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { fecha, isoToInput } from '../lib/format';
 
-const PAGE_SIZE = 50;
+// Mismos valores que EnumSimDet de la API (Idle=1, Activado=2, Reactivado=3,
+// Suspendido=4, Baja=5).
 const ESTADOS_SIM: Record<number, string> = {
-  1: 'Registrada', 2: 'Activa', 3: 'Suspendida', 4: 'Reactivada', 5: 'Baja',
+  1: 'Registrada', 2: 'Activa', 3: 'Reactivada', 4: 'Suspendida', 5: 'Baja',
 };
+
+// El listado trae el estado por nombre; el PUT y el filtro lo piden por número.
+const ESTADO_POR_NOMBRE: Record<string, number> = {
+  Idle: 1, Activado: 2, Reactivado: 3, Suspendido: 4, Baja: 5,
+};
+
+const estadoNum = (v: unknown): number =>
+  typeof v === 'string' && v in ESTADO_POR_NOMBRE ? ESTADO_POR_NOMBRE[v] : Number(v);
 
 interface Sim {
   id: number;
   imsi?: string; iccid?: string; msisdn?: string;
   idProducto?: number; productoDescripcion?: string;
   loteTecomnet?: string; loteALtan?: string;
-  fechaRegistro?: string; estadoSim?: number;
+  fechaRegistro?: string; estadoSim?: number | string;
   fechaCompra?: string; fechaRecepcion?: string; fechaEntrega?: string;
   fechaActivacion?: string; fechaSuspencion?: string; fechaReactivacion?: string;
   fechaInicioFacturacion?: string; fechaBaja?: string;
@@ -25,62 +36,44 @@ interface Sim {
   [k: string]: unknown;
 }
 
-interface PagedResult {
-  page: number; totalPages: number; totalRecords: number; data: Sim[];
+/** Filtros que acepta GET /Catalogos/simdet. */
+interface FiltrosSim {
+  search: string;
+  lote: string;
+  estadoSim: string;
+  productoId: string;
 }
 
-/** Ventana de páginas: 1 … page-2..page+2 … total. */
-function pageWindow(page: number, total: number): (number | '…')[] {
-  if (!total || total <= 1) return [];
-  const set = new Set<number>([1, total]);
-  for (let i = page - 2; i <= page + 2; i++) if (i >= 1 && i <= total) set.add(i);
-  const ordered = [...set].sort((a, b) => a - b);
-  const out: (number | '…')[] = [];
-  let last = 0;
-  for (const p of ordered) {
-    if (p - last > 1) out.push('…');
-    out.push(p);
-    last = p;
-  }
-  return out;
-}
+const SIN_FILTROS: FiltrosSim = { search: '', lote: '', estadoSim: '', productoId: '' };
 
 export default function Sims() {
   const { notify } = useUI();
   const { puedeEscribir } = usePermisos();
-  const [result, setResult] = useState<PagedResult>({ page: 1, totalPages: 1, totalRecords: 0, data: [] });
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  // "form" es lo que se está escribiendo; "filtros" lo ya aplicado (lo que se consulta).
+  const [form, setForm] = useState<FiltrosSim>(SIN_FILTROS);
+  const [filtros, setFiltros] = useState<FiltrosSim>(SIN_FILTROS);
+  const listado = useListadoPaginado<Sim>(`${API}/Catalogos/simdet`, { ...filtros });
+  const { items, estado } = listado;
+
   const [edit, setEdit] = useState<Sim | null>(null);
   const [guardando, setGuardando] = useState(false);
 
-  const cargar = useCallback(async (page: number, term: string) => {
-    setEstado('cargando');
-    try {
-      const res = await getJSON<PagedResult>(
-        `${API}/Catalogos/simdet/pages?page=${page}&pageSize=${PAGE_SIZE}&search=${encodeURIComponent(term)}`,
-      );
-      setResult(res);
-      setEstado('ok');
-    } catch {
-      setEstado('error');
-    }
-  }, []);
-
-  useEffect(() => { void cargar(1, ''); }, [cargar]);
-
-  const irA = (page: number) => { if (page >= 1 && page <= result.totalPages) void cargar(page, search); };
-  const buscar = () => { setSearch(searchInput); void cargar(1, searchInput); };
-  const limpiar = () => { setSearchInput(''); setSearch(''); void cargar(1, ''); };
+  const setFiltro = (k: keyof FiltrosSim, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const buscar = () => { setFiltros(form); listado.irA(1); };
+  const limpiar = () => { setForm(SIN_FILTROS); setFiltros(SIN_FILTROS); listado.irA(1); };
+  const enEnter = (e: React.KeyboardEvent) => { if (e.key === 'Enter') buscar(); };
 
   const guardar = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!edit) return;
+    // El PUT reemplaza: las fechas que no se tocaron se reenvían tal como
+    // llegaron del listado, y las que se vaciaron viajan como null.
     const orNull = (v?: string) => (v ? v : null);
+    const estadoSim = estadoNum(edit.estadoSim);
+    if (!ESTADOS_SIM[estadoSim]) { notify('Selecciona un estado válido.', 'danger'); return; }
     const payload = {
       id: edit.id,
-      estadoSim: Number(edit.estadoSim),
+      estadoSim,
       fechaInstalacion: orNull(edit.fechaInstalacion),
       fechaActivacion: orNull(edit.fechaActivacion),
       fechaReactivacion: orNull(edit.fechaReactivacion),
@@ -93,13 +86,13 @@ export default function Sims() {
     };
     setGuardando(true);
     try {
-      const { ok, status, data } = await sendJSONStatus('PUT', `${API}/Catalogos/simdet`, payload);
+      const { ok, status, data } = await sendJSONStatus('PUT', `${API}/Catalogos/simdet/${edit.id}`, payload);
       const aviso = avisoSinPermiso(status, data);
       if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify('SIM actualizada.', 'success');
       setEdit(null);
-      await cargar(result.page, search);
+      await listado.recargar();
     } catch (err) {
       notify('No se pudo guardar: ' + (err instanceof Error ? err.message : ''), 'danger');
     } finally {
@@ -121,17 +114,22 @@ export default function Sims() {
       <div className="mb-4">
         <span className="eyebrow">Catálogo</span>
         <h1 className="page-title mb-0">Sims</h1>
-        <p className="page-subtitle">
-          Página {result.page} de {result.totalPages} · Total registros: {result.totalRecords}
-        </p>
+        <p className="page-subtitle">Listado paginado del servidor. Usa los filtros para acotar la búsqueda.</p>
       </div>
 
       <div className="search-container">
-        <input type="text" placeholder="Buscar ICCID, IMSI o MSISDN..." value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') buscar(); }} />
+        <input type="text" placeholder="Buscar ICCID, IMSI o MSISDN..." value={form.search}
+          onChange={(e) => setFiltro('search', e.target.value)} onKeyDown={enEnter} />
+        <input type="text" className="narrow" placeholder="Lote" value={form.lote}
+          onChange={(e) => setFiltro('lote', e.target.value)} onKeyDown={enEnter} />
+        <select value={form.estadoSim} onChange={(e) => setFiltro('estadoSim', e.target.value)}>
+          <option value="">Estado: todos</option>
+          {Object.entries(ESTADOS_SIM).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+        </select>
+        <input type="number" className="narrow" min={1} step={1} placeholder="Producto Id" value={form.productoId}
+          onChange={(e) => setFiltro('productoId', e.target.value)} onKeyDown={enEnter} />
         <button className="btn btn-tec" onClick={buscar}><i className="bi bi-search" /> Buscar</button>
-        <button className="btn btn-secondary" onClick={limpiar}><i className="bi bi-funnel" /> Limpiar filtro</button>
+        <button className="btn btn-secondary" onClick={limpiar}><i className="bi bi-funnel" /> Limpiar filtros</button>
       </div>
 
       {edit && puedeEscribir && (
@@ -144,7 +142,7 @@ export default function Sims() {
             <div className="entity-grid">
               <div className="form-group">
                 <label>Estado Sim</label>
-                <select value={Number(edit.estadoSim) || ''} onChange={(e) => setEditDate('estadoSim', e.target.value)}>
+                <select value={estadoNum(edit.estadoSim) || ''} onChange={(e) => setEditDate('estadoSim', e.target.value)}>
                   {Object.entries(ESTADOS_SIM).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                 </select>
               </div>
@@ -179,13 +177,13 @@ export default function Sims() {
           <tbody>
             {estado === 'cargando' && <tr><td colSpan={19} className="text-center text-muted py-4">Cargando…</td></tr>}
             {estado === 'error' && <tr><td colSpan={19} className="text-center text-danger py-4">Error cargando sims.</td></tr>}
-            {estado === 'ok' && result.data.length === 0 && <tr><td colSpan={19} className="text-center text-muted py-4">Sin registros.</td></tr>}
-            {estado === 'ok' && result.data.map((p) => (
+            {estado === 'ok' && items.length === 0 && <tr><td colSpan={19} className="text-center text-muted py-4">Sin registros.</td></tr>}
+            {estado === 'ok' && items.map((p) => (
               <tr key={p.id}>
                 {puedeEscribir && <td><button className="action-btn edit" title="Editar" onClick={() => setEdit(p)}><i className="bi bi-pencil" /></button></td>}
                 <td>{p.id}</td><td>{p.imsi}</td><td>{p.iccid}</td><td>{p.msisdn}</td><td>{p.idProducto}</td>
                 <td>{p.productoDescripcion}</td><td>{p.loteTecomnet}</td><td>{p.loteALtan}</td><td>{fecha(p.fechaRegistro)}</td>
-                <td>{ESTADOS_SIM[Number(p.estadoSim)] ?? p.estadoSim}</td>
+                <td>{ESTADOS_SIM[estadoNum(p.estadoSim)] ?? p.estadoSim}</td>
                 <td>{fecha(p.fechaCompra)}</td><td>{fecha(p.fechaRecepcion)}</td><td>{fecha(p.fechaEntrega)}</td>
                 <td>{fecha(p.fechaActivacion)}</td><td>{fecha(p.fechaSuspencion)}</td><td>{fecha(p.fechaReactivacion)}</td>
                 <td>{fecha(p.fechaInicioFacturacion)}</td><td>{fecha(p.fechaBaja)}</td>
@@ -195,22 +193,12 @@ export default function Sims() {
         </table>
       </div>
 
-      {result.totalPages > 1 && (
-        <div className="pagination-bar">
-          <button className="page-btn" onClick={() => irA(result.page - 1)} disabled={result.page <= 1}>
-            <i className="bi bi-chevron-left" /> Anterior
-          </button>
-          {pageWindow(result.page, result.totalPages).map((p, i) =>
-            p === '…'
-              ? <span key={`e${i}`} className="pagination-ellipsis">…</span>
-              : <button key={p} className={`page-btn${p === result.page ? ' active' : ''}`}
-                  onClick={() => irA(p)} disabled={p === result.page}>{p}</button>,
-          )}
-          <button className="page-btn" onClick={() => irA(result.page + 1)} disabled={result.page >= result.totalPages}>
-            Siguiente <i className="bi bi-chevron-right" />
-          </button>
-        </div>
-      )}
+      <Paginacion
+        page={listado.page} pageSize={listado.pageSize}
+        totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+        onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+        etiqueta="sims"
+      />
     </AppLayout>
   );
 }

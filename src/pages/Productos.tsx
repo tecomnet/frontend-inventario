@@ -1,10 +1,12 @@
 // Administración de Productos (alta, edición, baja).
 // Equivale a getProductos / renderProductoForm / bajaProducto del panel viejo.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
 import { usePermisos } from '../hooks/usePermisos';
-import { API, getJSON, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
 interface Producto {
@@ -33,24 +35,11 @@ const vacio: Producto = {
 export default function Productos() {
   const { notify } = useUI();
   const { puedeEscribir } = usePermisos();
-  const [items, setItems] = useState<Producto[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
+  const listado = useListadoPaginado<Producto>(`${API}/Productos`);
+  const { items, estado } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Producto>(vacio);
   const [guardando, setGuardando] = useState(false);
-
-  const cargar = async () => {
-    setEstado('cargando');
-    try {
-      const data = await getJSON<Producto[]>(`${API}/Productos`);
-      setItems(Array.isArray(data) ? data : []);
-      setEstado('ok');
-    } catch {
-      setEstado('error');
-    }
-  };
-
-  useEffect(() => { void cargar(); }, []);
 
   const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (p: Producto) => {
@@ -68,11 +57,13 @@ export default function Productos() {
       id: form.id ?? 0,
       codInterno: (form.codInterno ?? '').trim(),
       descripcion: (form.descripcion ?? '').trim(),
-      marcaId: form.marcaId ?? 0,
-      lineaId: form.lineaId ?? 0,
-      presentacionId: form.presentacionId ?? 0,
-      unidadMedidaId: form.unidadMedidaId ?? 0,
-      materialId: form.materialId ?? 0,
+      // Opcionales en la API: el listado trae 0 cuando no hay valor, y 0 no
+      // es un id válido; viaja como null para no romper la llave al editar.
+      marcaId: form.marcaId || null,
+      lineaId: form.lineaId || null,
+      presentacionId: form.presentacionId || null,
+      unidadMedidaId: form.unidadMedidaId || null,
+      materialId: form.materialId || null,
       iva: form.iva ?? 0,
       ieps: form.ieps ?? 0,
       esActivo: form.esActivo ?? true,
@@ -80,7 +71,7 @@ export default function Productos() {
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Productos`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Productos/${payload.id}` : `${API}/Productos`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
@@ -88,7 +79,7 @@ export default function Productos() {
         return;
       }
       notify(isEdit ? 'Producto actualizado.' : 'Producto creado.', 'success');
-      await cargar();
+      await listado.recargar();
       setVista('lista');
     } catch (err) {
       notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
@@ -100,12 +91,12 @@ export default function Productos() {
   const baja = async (id: number) => {
     if (!window.confirm(`¿Dar de baja el producto ${id}?`)) return;
     try {
-      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Productos`, { id });
+      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Productos/${id}`);
       const aviso = avisoSinPermiso(status, data);
       if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify('Producto dado de baja.', 'success');
-      await cargar();
+      await listado.recargar();
     } catch {
       notify('No se pudo dar de baja el producto. Revisa el API.', 'danger');
     }
@@ -151,6 +142,13 @@ export default function Productos() {
               </table>
             </div>
           </div>
+
+          <Paginacion
+            page={listado.page} pageSize={listado.pageSize}
+            totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+            onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+            etiqueta="productos"
+          />
         </>
       ) : (
         <>

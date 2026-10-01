@@ -1,10 +1,12 @@
 // Administración de Empresas (alta, edición).
 // Equivale a getEmpresas / renderEmpresaForm / guardarEmpresa del panel viejo.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
 import { usePermisos } from '../hooks/usePermisos';
-import { API, getJSON, sendJSONStatus } from '../lib/api';
+import { API, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
 interface Empresa {
@@ -19,24 +21,11 @@ const vacio: Empresa = { id: 0, descripcion: '', rfc: '', esActiva: true };
 export default function Empresas() {
   const { notify } = useUI();
   const { puedeEscribir } = usePermisos();
-  const [items, setItems] = useState<Empresa[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
+  const listado = useListadoPaginado<Empresa>(`${API}/Catalogos/empresas`);
+  const { items, estado } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Empresa>(vacio);
   const [guardando, setGuardando] = useState(false);
-
-  const cargar = async () => {
-    setEstado('cargando');
-    try {
-      const data = await getJSON<Empresa[]>(`${API}/Catalogos/empresas`);
-      setItems(Array.isArray(data) ? data : []);
-      setEstado('ok');
-    } catch {
-      setEstado('error');
-    }
-  };
-
-  useEffect(() => { void cargar(); }, []);
 
   const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (e: Empresa) => { setForm({ ...e }); setVista('form'); window.scrollTo(0, 0); };
@@ -55,7 +44,7 @@ export default function Empresas() {
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Catalogos/empresas`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/empresas/${form.id}` : `${API}/Catalogos/empresas`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
@@ -63,7 +52,7 @@ export default function Empresas() {
         return;
       }
       notify(isEdit ? 'Empresa actualizada.' : 'Empresa creada.', 'success');
-      await cargar();
+      await listado.recargar();
       setVista('lista');
     } catch (err) {
       notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
@@ -108,6 +97,13 @@ export default function Empresas() {
               </table>
             </div>
           </div>
+
+          <Paginacion
+            page={listado.page} pageSize={listado.pageSize}
+            totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+            onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+            etiqueta="empresas"
+          />
         </>
       ) : (
         <>

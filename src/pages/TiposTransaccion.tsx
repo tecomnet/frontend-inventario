@@ -1,26 +1,15 @@
 // Catálogo de solo lectura: Tipos de Transacción.
 // Equivale a getTiposDeTransaccion del panel viejo.
-import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
-import { API, getJSON } from '../lib/api';
+import Paginacion from '../components/Paginacion';
+import { API } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 
 interface Tipo { id: number; descripcion?: string; naturaleza?: string }
 
 export default function TiposTransaccion() {
-  const [items, setItems] = useState<Tipo[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await getJSON<Tipo[]>(`${API}/Catalogos/tipostransaccion`);
-        setItems(Array.isArray(data) ? data : []);
-        setEstado('ok');
-      } catch {
-        setEstado('error');
-      }
-    })();
-  }, []);
+  const listado = useListadoPaginado<Tipo>(`${API}/Catalogos/tipostransaccion`);
+  const { items, estado } = listado;
 
   return (
     <AppLayout active="tipos-transaccion">
@@ -53,6 +42,13 @@ export default function TiposTransaccion() {
           </table>
         </div>
       </div>
+
+      <Paginacion
+        page={listado.page} pageSize={listado.pageSize}
+        totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+        onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+        etiqueta="tipos de transacción"
+      />
     </AppLayout>
   );
 }
