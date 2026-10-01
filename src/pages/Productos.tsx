@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useUI } from '../context/UIContext';
-import { API, getJSON, sendJSONStatus } from '../lib/api';
+import { usePermisos } from '../hooks/usePermisos';
+import { API, getJSON, avisoSinPermiso, sendJSONStatus } from '../lib/api';
 import { siNo } from '../lib/format';
 
 interface Producto {
@@ -31,6 +32,7 @@ const vacio: Producto = {
 
 export default function Productos() {
   const { notify } = useUI();
+  const { puedeEscribir } = usePermisos();
   const [items, setItems] = useState<Producto[]>([]);
   const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
@@ -98,7 +100,9 @@ export default function Productos() {
   const baja = async (id: number) => {
     if (!window.confirm(`¿Dar de baja el producto ${id}?`)) return;
     try {
-      const { ok, status } = await sendJSONStatus('DELETE', `${API}/Productos`, { id });
+      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Productos`, { id });
+      const aviso = avisoSinPermiso(status, data);
+      if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify('Producto dado de baja.', 'success');
       await cargar();
@@ -116,7 +120,7 @@ export default function Productos() {
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">Productos</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nuevo producto</button>
+            {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nuevo producto</button>}
           </div>
 
           <div className="table-card p-3">
@@ -125,7 +129,7 @@ export default function Productos() {
                 <thead>
                   <tr>
                     <th>Id</th><th>Código</th><th>Nombre</th><th>Material</th><th>Tipo</th>
-                    <th>Línea</th><th>IVA</th><th>IEPS</th><th>Activo</th><th className="text-end">Acciones</th>
+                    <th>Línea</th><th>IVA</th><th>IEPS</th><th>Activo</th>{puedeEscribir && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -137,10 +141,10 @@ export default function Productos() {
                       <td>{p.id}</td><td>{p.codInterno ?? '-'}</td><td>{p.descripcion}</td>
                       <td>{p.materialDescripcion}</td><td>{p.presentacionDescripcion}</td><td>{p.lineaDescripcion}</td>
                       <td>{p.iva}</td><td>{p.ieps}</td><td>{siNo(p.esActivo)}</td>
-                      <td className="text-end">
+                      {puedeEscribir && <td className="text-end">
                         <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(p)}><i className="bi bi-pencil" /></button>
                         <button className="action-btn disable" title="Dar de baja" onClick={() => baja(p.id)}><i className="bi bi-slash-circle" /></button>
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>

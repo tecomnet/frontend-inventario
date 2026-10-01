@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useUI } from '../context/UIContext';
-import { API, getJSON, sendJSONStatus } from '../lib/api';
+import { usePermisos } from '../hooks/usePermisos';
+import { API, getJSON, avisoSinPermiso, sendJSONStatus } from '../lib/api';
 import { siNo } from '../lib/format';
 
 interface Udn {
@@ -18,6 +19,7 @@ const vacio: Udn = { idUdn: 0, descripcion: '', idEmpresa: 0, esActiva: true };
 
 export default function UnidadesNegocio() {
   const { notify } = useUI();
+  const { puedeEscribir } = usePermisos();
   const [items, setItems] = useState<Udn[]>([]);
   const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
@@ -79,7 +81,9 @@ export default function UnidadesNegocio() {
   const baja = async (idUdn: number) => {
     if (!window.confirm(`¿Dar de baja la UDN ${idUdn}?`)) return;
     try {
-      const { ok, status } = await sendJSONStatus('DELETE', `${API}/Catalogos/unidadesnegocio`, { idUdn });
+      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Catalogos/unidadesnegocio`, { idUdn });
+      const aviso = avisoSinPermiso(status, data);
+      if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify('UDN dada de baja.', 'success');
       await cargar();
@@ -97,7 +101,7 @@ export default function UnidadesNegocio() {
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">Unidades de Negocio</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva UDN</button>
+            {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva UDN</button>}
           </div>
 
           <div className="table-card p-3">
@@ -105,7 +109,7 @@ export default function UnidadesNegocio() {
               <table className="table table-cat align-middle">
                 <thead>
                   <tr>
-                    <th>Id</th><th>Descripción</th><th>Empresa Id</th><th>Activa</th><th className="text-end">Acciones</th>
+                    <th>Id</th><th>Descripción</th><th>Empresa Id</th><th>Activa</th>{puedeEscribir && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -117,10 +121,10 @@ export default function UnidadesNegocio() {
                     return (
                       <tr key={id}>
                         <td>{id}</td><td>{u.descripcion}</td><td>{u.idEmpresa}</td><td>{siNo(u.esActiva)}</td>
-                        <td className="text-end">
+                        {puedeEscribir && <td className="text-end">
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(u)}><i className="bi bi-pencil" /></button>
                           <button className="action-btn disable" title="Dar de baja" onClick={() => baja(id)}><i className="bi bi-slash-circle" /></button>
-                        </td>
+                        </td>}
                       </tr>
                     );
                   })}

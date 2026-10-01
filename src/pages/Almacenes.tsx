@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useUI } from '../context/UIContext';
-import { API, getJSON, sendJSONStatus } from '../lib/api';
+import { usePermisos } from '../hooks/usePermisos';
+import { API, getJSON, avisoSinPermiso, sendJSONStatus } from '../lib/api';
 import { siNo } from '../lib/format';
 
 interface Almacen {
@@ -20,6 +21,7 @@ const vacio: Almacen = { idAlmacen: 0, descripcion: '', tipo: '', idEmpresa: 0, 
 
 export default function Almacenes() {
   const { notify } = useUI();
+  const { puedeEscribir } = usePermisos();
   const [items, setItems] = useState<Almacen[]>([]);
   const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
@@ -85,7 +87,9 @@ export default function Almacenes() {
     if (!a) return;
     if (!window.confirm(`¿Dar de baja el almacén ${idAlmacen}?`)) return;
     try {
-      const { ok, status } = await sendJSONStatus('DELETE', `${API}/Catalogos/almacenes`, { idAlmacen, idEmpresa: a.idEmpresa, idUdn: a.idUdn });
+      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Catalogos/almacenes`, { idAlmacen, idEmpresa: a.idEmpresa, idUdn: a.idUdn });
+      const aviso = avisoSinPermiso(status, data);
+      if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify('Almacén dado de baja.', 'success');
       await cargar();
@@ -103,7 +107,7 @@ export default function Almacenes() {
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">Almacenes</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nuevo almacén</button>
+            {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nuevo almacén</button>}
           </div>
 
           <div className="table-card p-3">
@@ -111,7 +115,7 @@ export default function Almacenes() {
               <table className="table table-cat align-middle">
                 <thead>
                   <tr>
-                    <th>Id</th><th>Descripción</th><th>Tipo</th><th>Empresa</th><th>UDN</th><th>Activo</th><th className="text-end">Acciones</th>
+                    <th>Id</th><th>Descripción</th><th>Tipo</th><th>Empresa</th><th>UDN</th><th>Activo</th>{puedeEscribir && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -123,10 +127,10 @@ export default function Almacenes() {
                     return (
                       <tr key={id}>
                         <td>{id}</td><td>{a.descripcion}</td><td>{a.tipo}</td><td>{a.idEmpresa}</td><td>{a.idUdn}</td><td>{siNo(a.esActivo)}</td>
-                        <td className="text-end">
+                        {puedeEscribir && <td className="text-end">
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(a)}><i className="bi bi-pencil" /></button>
                           <button className="action-btn disable" title="Dar de baja" onClick={() => baja(id)}><i className="bi bi-slash-circle" /></button>
-                        </td>
+                        </td>}
                       </tr>
                     );
                   })}

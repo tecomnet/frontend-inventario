@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import { useUI } from '../context/UIContext';
+import { usePermisos } from '../hooks/usePermisos';
 import { API, getJSON, sendJSONStatus } from '../lib/api';
 import { siNo } from '../lib/format';
 
@@ -17,6 +18,7 @@ const vacio: Linea = { id: 0, descripcion: '', idLineaPadre: 0, esActiva: true }
 
 export default function Lineas() {
   const { notify } = useUI();
+  const { puedeEscribir } = usePermisos();
   const [items, setItems] = useState<Linea[]>([]);
   const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
@@ -80,7 +82,7 @@ export default function Lineas() {
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">Líneas</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva línea</button>
+            {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva línea</button>}
           </div>
 
           <div className="table-card p-3">
@@ -89,7 +91,7 @@ export default function Lineas() {
                 <thead>
                   <tr>
                     <th>Id</th><th>Descripción</th><th>Línea Padre</th><th>Activa</th>
-                    <th className="text-end">Acciones</th>
+                    {puedeEscribir && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -99,9 +101,9 @@ export default function Lineas() {
                   {estado === 'ok' && items.map((l) => (
                     <tr key={l.id}>
                       <td>{l.id}</td><td>{l.descripcion}</td><td>{l.idLineaPadre ?? '-'}</td><td>{siNo(l.esActiva)}</td>
-                      <td className="text-end">
+                      {puedeEscribir && <td className="text-end">
                         <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(l)}><i className="bi bi-pencil" /></button>
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>

@@ -3,9 +3,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePermisos } from '../hooks/usePermisos';
 
 interface Leaf { key: string; to: string; icon: string; label: string }
-interface Group { group: string; icon: string; items: Leaf[] }
+/** escritura: el grupo solo sirve para escribir y se oculta al rol de lectura. */
+interface Group { group: string; icon: string; items: Leaf[]; escritura?: boolean }
 type NavItem = Leaf | Group;
 
 const NAV: NavItem[] = [
@@ -38,7 +40,7 @@ const NAV: NavItem[] = [
     ],
   },
   {
-    group: 'Importadores', icon: 'bi-filetype-csv', items: [
+    group: 'Importadores', icon: 'bi-filetype-csv', escritura: true, items: [
       { key: 'importador', to: '/importador', icon: 'bi-file-arrow-up', label: 'Importador Inventario' },
       { key: 'importador-sims', to: '/importador-sims', icon: 'bi-sim', label: 'Importador Sims' },
     ],
@@ -66,7 +68,9 @@ interface Props {
 }
 
 export default function AppLayout({ active, children }: Props) {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const { rol, etiquetaRol, puedeEscribir } = usePermisos();
+  const nav = NAV.filter((n) => !('group' in n && n.escritura && !puedeEscribir));
   // En móvil arranca colapsado (oculto); en desktop, visible.
   const [collapsed, setCollapsed] = useState(
     () => typeof window !== 'undefined' && window.innerWidth <= 768,
@@ -92,7 +96,7 @@ export default function AppLayout({ active, children }: Props) {
       <aside className="sidebar">
         <div className="brand" aria-label="Inventario" />
         <nav className="nav flex-column">
-          {NAV.map((n) =>
+          {nav.map((n) =>
             'group' in n ? (
               <div key={n.group}>
                 <a
@@ -146,6 +150,13 @@ export default function AppLayout({ active, children }: Props) {
       </button>
 
       <div className="main">
+        <header className="topbar">
+          <div className="usuario-sesion" title="Usuario y rol de la sesión">
+            <i className="bi bi-person-circle" />
+            <span className="usuario-nombre">{user?.Nombre ?? user?.NombreUsuario ?? ''}</span>
+            <span className={`rol-badge rol-${rol ?? 'ninguno'}`}>{etiquetaRol}</span>
+          </div>
+        </header>
         <div className="content">{children}</div>
       </div>
     </div>

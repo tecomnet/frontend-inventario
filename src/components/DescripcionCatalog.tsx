@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react';
 import AppLayout from './AppLayout';
 import { useUI } from '../context/UIContext';
-import { getJSON, sendJSONStatus } from '../lib/api';
+import { usePermisos } from '../hooks/usePermisos';
+import { getJSON, avisoSinPermiso, sendJSONStatus } from '../lib/api';
 
 interface Item { id: number; descripcion?: string }
 
@@ -17,6 +18,7 @@ interface Props {
 
 export default function DescripcionCatalog({ active, titulo, singular, url }: Props) {
   const { notify } = useUI();
+  const { puedeEscribir } = usePermisos();
   const [items, setItems] = useState<Item[]>([]);
   const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
   const [errMsg, setErrMsg] = useState('');
@@ -54,7 +56,9 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
     const payload = isEdit ? { id: editingId, descripcion: d } : { descripcion: d };
     setGuardando(true);
     try {
-      const { ok, status } = await sendJSONStatus(isEdit ? 'PUT' : 'POST', url, payload);
+      const { ok, status, data } = await sendJSONStatus(isEdit ? 'PUT' : 'POST', url, payload);
+      const aviso = avisoSinPermiso(status, data);
+      if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify(isEdit ? `${singular} actualizada.` : `${singular} creada.`, 'success');
       await cargar();
@@ -75,16 +79,18 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">{titulo}</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}>
-              <i className="bi bi-plus-lg" /> Nuevo
-            </button>
+            {puedeEscribir && (
+              <button className="btn btn-tec" onClick={abrirAlta}>
+                <i className="bi bi-plus-lg" /> Nuevo
+              </button>
+            )}
           </div>
 
           <div className="table-card p-3">
             <div className="table-responsive">
               <table className="table table-cat align-middle">
                 <thead>
-                  <tr><th>Id</th><th>Descripción</th><th className="text-end">Acciones</th></tr>
+                  <tr><th>Id</th><th>Descripción</th>{puedeEscribir && <th className="text-end">Acciones</th>}</tr>
                 </thead>
                 <tbody>
                   {estado === 'cargando' && (
@@ -100,11 +106,13 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
                     <tr key={c.id}>
                       <td>{c.id}</td>
                       <td>{c.descripcion}</td>
-                      <td className="text-end">
-                        <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(c)}>
-                          <i className="bi bi-pencil" />
-                        </button>
-                      </td>
+                      {puedeEscribir && (
+                        <td className="text-end">
+                          <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(c)}>
+                            <i className="bi bi-pencil" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
