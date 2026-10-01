@@ -10,7 +10,10 @@
     "build": "tsc -b && vite build",
     "build:lambda": "esbuild server/lambda.ts --bundle --platform=node --target=node20 --format=cjs --outfile=lambda/index.cjs",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "format": "prettier --write",
+    "format:check": "prettier --check",
+    "preview": "vite preview",
+    "prepare": "node -e \"try{require('child_process').execSync('git config core.hooksPath .githooks',{stdio:'ignore'})}catch{}\""
   },
   "dependencies": {
     "bootstrap": "^5.3.8",
@@ -36,9 +39,11 @@
     "concurrently": "^10.0.3",
     "esbuild": "^0.28.1",
     "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "prettier": "^3.9.9",
     "tsx": "^4.22.4",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",

@@ -1,0 +1,27 @@
+#!/bin/sh
+# Si la rama actual contiene una clave KL-###, la antepone automaticamente
+# al mensaje de commit cuando el autor no la escribio.
+# Instalar con: git config core.hooksPath .githooks
+
+msg_file="$1"
+commit_source="$2"
+
+# No tocar merges, squashes, reverts ni commits con mensaje ya definido (-m con clave, -c, --amend).
+case "$commit_source" in
+  merge|squash|commit) exit 0 ;;
+esac
+
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+key=$(echo "$branch" | grep -Eo 'KL-[0-9]+' | head -n 1)
+
+[ -z "$key" ] && exit 0
+
+# Si el mensaje ya trae la clave, no duplicar.
+if grep -Eq "\b$key\b" "$msg_file"; then
+  exit 0
+fi
+
+tmp="$msg_file.tmp"
+printf '%s: ' "$key" > "$tmp"
+cat "$msg_file" >> "$tmp"
+mv "$tmp" "$msg_file"
