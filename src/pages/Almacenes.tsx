@@ -4,8 +4,9 @@ import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
-import { API, sendJSONStatus } from '../lib/api';
+import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
+import { usePermisos } from '../hooks/usePermisos';
 import { siNo } from '../lib/format';
 
 // La API lista con id/empresaId/udnId y el PUT recibe idAlmacen/idEmpresa/idUdn;
@@ -46,6 +47,7 @@ export default function Almacenes() {
   const { notify } = useUI();
   const listado = useListadoPaginado<Almacen>(`${API}/Catalogos/almacenes`);
   const { items, estado } = listado;
+  const { puedeEscribir } = usePermisos();
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Almacen>(vacio);
   // Alta o edición se decide por esto y no por idAlmacen > 0, para que editar
@@ -106,7 +108,9 @@ export default function Almacenes() {
     }
     if (!window.confirm(`¿Dar de baja el almacén ${normalizar(a).idAlmacen} (${a.descripcion ?? ''})?`)) return;
     try {
-      const { ok, status } = await sendJSONStatus('DELETE', ruta);
+      const { ok, status, data } = await sendJSONStatus('DELETE', ruta);
+      const aviso = avisoSinPermiso(status, data);
+      if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify('Almacén dado de baja.', 'success');
       await listado.recargar();
@@ -124,7 +128,7 @@ export default function Almacenes() {
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">Almacenes</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nuevo almacén</button>
+            {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nuevo almacén</button>}
           </div>
 
           <div className="table-card p-3">
@@ -132,7 +136,7 @@ export default function Almacenes() {
               <table className="table table-cat align-middle">
                 <thead>
                   <tr>
-                    <th>Id</th><th>Descripción</th><th>Tipo</th><th>Empresa</th><th>UDN</th><th>Activo</th><th className="text-end">Acciones</th>
+                    <th>Id</th><th>Descripción</th><th>Tipo</th><th>Empresa</th><th>UDN</th><th>Activo</th>{puedeEscribir && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -144,10 +148,10 @@ export default function Almacenes() {
                     return (
                       <tr key={`${a.idEmpresa}-${a.idUdn}-${a.idAlmacen}-${i}`}>
                         <td>{a.idAlmacen}</td><td>{a.descripcion}</td><td>{a.tipo}</td><td>{a.idEmpresa}</td><td>{a.idUdn}</td><td>{siNo(a.esActivo)}</td>
-                        <td className="text-end">
+                        {puedeEscribir && <td className="text-end">
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(a)}><i className="bi bi-pencil" /></button>
                           <button className="action-btn disable" title="Dar de baja" onClick={() => baja(a)}><i className="bi bi-slash-circle" /></button>
-                        </td>
+                        </td>}
                       </tr>
                     );
                   })}
