@@ -12,6 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write",
     "format:check": "prettier --check",
+    "gen:api": "node scripts/gen-api.mjs",
+    "gen:api:fetch": "node scripts/gen-api.mjs --fetch",
     "preview": "vite preview",
     "prepare": "node -e \"try{require('child_process').execSync('git config core.hooksPath .githooks',{stdio:'ignore'})}catch{}\""
   },
@@ -43,10 +45,16 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.9",
     "tsx": "^4.22.4",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   }
 }
