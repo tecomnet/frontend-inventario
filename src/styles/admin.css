@@ -269,6 +269,17 @@ body.home .page-title { font-size: 2.75rem; font-weight: 700; color: #1f2937; }
 }
 .form-group small { color: #6b7280; font-weight: 400; }
 
+/* Error de validación de la API junto al campo (CampoError + aria-invalid). */
+.form-group input[aria-invalid="true"], .form-group select[aria-invalid="true"],
+.form-control[aria-invalid="true"] {
+  border-color: #dc3545;
+}
+.form-group input[aria-invalid="true"]:focus, .form-group select[aria-invalid="true"]:focus,
+.form-control[aria-invalid="true"]:focus {
+  border-color: #dc3545; box-shadow: 0 0 0 .2rem rgba(220,53,69,.15);
+}
+.campo-error { color: #dc3545; font-size: .82rem; margin-top: .3rem; }
+
 /* ===== Importador: drop-zone ===== */
 .drop-zone {
   border: 2px dashed #c7d2fe; border-radius: 14px; background: #f8faff;

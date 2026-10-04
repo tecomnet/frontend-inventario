@@ -5,6 +5,7 @@
 // ============================================================
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { describirError } from './errores';
 import {
   PAGE_SIZE_DEFAULT, clampPageSize, getPaged,
   type Filtros, type PagedResult,
@@ -19,6 +20,7 @@ export interface Listado<T> {
   page: number;
   pageSize: number;
   estado: EstadoCarga;
+  /** Mensaje para el usuario si estado es 'error' (ver lib/errores). */
   errMsg: string;
   /** Cambia de página (escribe en la URL). */
   irA: (page: number, replace?: boolean) => void;
@@ -89,7 +91,7 @@ export function useListadoPaginado<T>(url: string, filtros: Filtros = {}): Lista
       if (res.totalPages > 0 && page > res.totalPages) irA(res.totalPages, true);
     } catch (err) {
       if (peticion !== ultimaPeticion.current) return;
-      const errMsg = err instanceof Error ? err.message : 'error';
+      const errMsg = describirError(err).mensaje;
       // Conserva los totales de la carga anterior para no vaciar la barra.
       setCarga((prev) => ({ consulta, estado: 'error', res: prev?.res ?? vacio<T>(pageSize), errMsg }));
     }

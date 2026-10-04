@@ -2,34 +2,24 @@
 // Equivale a getAlmacenes / renderAlmacenForm / guardarAlmacen / bajaAlmacen del panel viejo.
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import CampoError from '../components/CampoError';
 import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
+import { useErroresForm } from '../hooks/useErroresForm';
 import { usePermisos } from '../hooks/usePermisos';
-import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { API, sendJSON } from '../lib/api';
+import type { Almacen, CreateAlmacen, UpdateAlmacen } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
-// La API lista con id/empresaId/udnId y el PUT recibe idAlmacen/idEmpresa/idUdn;
-// el formulario trabaja con los nombres del PUT y acepta los dos al leer.
-interface Almacen {
-  idAlmacen: number;
-  id?: number;
-  descripcion?: string;
-  tipo?: string;
-  idEmpresa?: number;
-  empresaId?: number;
-  idUdn?: number;
-  udnId?: number;
-  esActivo?: boolean;
-}
+// La API lista con id/empresaId/udnId y el PUT recibe idAlmacen/idEmpresa/idUdn:
+// el formulario trabaja con los nombres del PUT.
+const vacio: UpdateAlmacen = { idAlmacen: 0, descripcion: '', tipo: '', idEmpresa: 0, idUdn: 0, esActivo: true };
+const CAMPOS = ['descripcion', 'tipo', 'idEmpresa', 'idUdn'] as const;
 
-const vacio: Almacen = { idAlmacen: 0, descripcion: '', tipo: '', idEmpresa: 0, idUdn: 0, esActivo: true };
-
-const normalizar = (a: Almacen): Almacen => ({
-  ...a,
-  idAlmacen: a.idAlmacen ?? a.id ?? 0,
-  idEmpresa: a.idEmpresa ?? a.empresaId ?? 0,
-  idUdn: a.idUdn ?? a.udnId ?? 0,
+const aForm = (a: Almacen): UpdateAlmacen => ({
+  idAlmacen: a.id, idEmpresa: a.empresaId, idUdn: a.udnId,
+  descripcion: a.descripcion, tipo: a.tipo, esActivo: a.esActivo,
 });
 
 /**
@@ -37,31 +27,35 @@ const normalizar = (a: Almacen): Almacen => ({
  * Ojo con el orden: la API lo pide como {empresaId}/{udnId}/{almacenId}.
  * Devuelve null si falta alguna parte (no se puede editar ni borrar).
  */
-const rutaDe = (a: Almacen): string | null => {
-  const { idEmpresa = 0, idUdn = 0, idAlmacen } = normalizar(a);
+const rutaDe = ({ idEmpresa, idUdn, idAlmacen }: UpdateAlmacen): string | null => {
   if (!idEmpresa || !idUdn || !idAlmacen) return null;
   return `${API}/Catalogos/almacenes/${idEmpresa}/${idUdn}/${idAlmacen}`;
 };
 
 export default function Almacenes() {
-  const { notify } = useUI();
+  const { notify, notifyError } = useUI();
   const { puedeEscribir } = usePermisos();
   const listado = useListadoPaginado<Almacen>(`${API}/Catalogos/almacenes`);
-  const { items, estado } = listado;
+  const { items, estado, errMsg } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
-  const [form, setForm] = useState<Almacen>(vacio);
+  const [form, setForm] = useState<UpdateAlmacen>(vacio);
   // Alta o edición se decide por esto y no por idAlmacen > 0, para que editar
   // un almacén sin llave completa nunca termine creando otro.
   const [editando, setEditando] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const errores = useErroresForm(CAMPOS);
 
-  const abrirAlta = () => { setForm(vacio); setEditando(false); setVista('form'); window.scrollTo(0, 0); };
-  const abrirEdicion = (a: Almacen) => {
-    setForm(normalizar(a)); setEditando(true);
+  const abrirForm = (f: UpdateAlmacen, edicion: boolean) => {
+    setForm(f); setEditando(edicion); errores.limpiar();
     setVista('form'); window.scrollTo(0, 0);
   };
+  const abrirAlta = () => abrirForm(vacio, false);
+  const abrirEdicion = (f: UpdateAlmacen) => abrirForm(f, true);
 
-  const set = <K extends keyof Almacen>(k: K, v: Almacen[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const set = <K extends keyof UpdateAlmacen>(k: K, v: UpdateAlmacen[K]) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    errores.limpiar(k);
+  };
   const num = (v: string) => Number(v) || 0;
 
   const guardar = async (ev: React.FormEvent) => {
@@ -73,49 +67,39 @@ export default function Almacenes() {
       return;
     }
     const base = {
-      descripcion: (form.descripcion ?? '').trim(),
-      tipo: (form.tipo ?? '').trim(),
-      idEmpresa: form.idEmpresa ?? 0,
-      idUdn: form.idUdn ?? 0,
+      descripcion: form.descripcion.trim(),
+      tipo: form.tipo.trim(),
+      idEmpresa: form.idEmpresa,
+      idUdn: form.idUdn,
       esActivo: form.esActivo ?? true,
-    };
-    const payload = isEdit ? { idAlmacen: form.idAlmacen, ...base } : base;
+    } satisfies CreateAlmacen;
     setGuardando(true);
     try {
-      const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', ruta, payload,
-      );
-      if (!ok) {
-        const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
-        notify('No se pudo guardar:\n' + lines.map((l) => `• ${l}`).join('\n'), 'danger');
-        return;
-      }
+      if (isEdit) await sendJSON('PUT', ruta, { idAlmacen: form.idAlmacen, ...base } satisfies UpdateAlmacen);
+      else await sendJSON('POST', ruta, base);
       notify(isEdit ? 'Almacén actualizado.' : 'Almacén creado.', 'success');
       await listado.recargar();
       setVista('lista');
     } catch (err) {
-      notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
+      errores.capturar(err, 'No se pudo guardar el almacén');
     } finally {
       setGuardando(false);
     }
   };
 
-  const baja = async (a: Almacen) => {
+  const baja = async (a: UpdateAlmacen) => {
     const ruta = rutaDe(a);
     if (!ruta) {
       notify('No se puede dar de baja: el API no devolvió la llave completa del almacén.', 'danger');
       return;
     }
-    if (!window.confirm(`¿Dar de baja el almacén ${normalizar(a).idAlmacen} (${a.descripcion ?? ''})?`)) return;
+    if (!window.confirm(`¿Dar de baja el almacén ${a.idAlmacen} (${a.descripcion})?`)) return;
     try {
-      const { ok, status, data } = await sendJSONStatus('DELETE', ruta);
-      const aviso = avisoSinPermiso(status, data);
-      if (aviso) { notify(aviso, 'warning'); return; }
-      if (!ok) throw new Error('HTTP ' + status);
+      await sendJSON('DELETE', ruta);
       notify('Almacén dado de baja.', 'success');
       await listado.recargar();
-    } catch {
-      notify('No se pudo dar de baja el almacén. Revisa el API.', 'danger');
+    } catch (err) {
+      notifyError(err, 'No se pudo dar de baja el almacén');
     }
   };
 
@@ -141,10 +125,10 @@ export default function Almacenes() {
                 </thead>
                 <tbody>
                   {estado === 'cargando' && <tr><td colSpan={7} className="text-center text-muted py-4">Cargando…</td></tr>}
-                  {estado === 'error' && <tr><td colSpan={7} className="text-center text-danger py-4">No se pudo cargar.</td></tr>}
+                  {estado === 'error' && <tr><td colSpan={7} className="text-center text-danger py-4">{errMsg || 'No se pudo cargar.'}</td></tr>}
                   {estado === 'ok' && items.length === 0 && <tr><td colSpan={7} className="text-center text-muted py-4">Sin registros.</td></tr>}
                   {estado === 'ok' && items.map((raw, i) => {
-                    const a = normalizar(raw);
+                    const a = aForm(raw);
                     return (
                       <tr key={`${a.idEmpresa}-${a.idUdn}-${a.idAlmacen}-${i}`}>
                         <td>{a.idAlmacen}</td><td>{a.descripcion}</td><td>{a.tipo}</td><td>{a.idEmpresa}</td><td>{a.idUdn}</td><td>{siNo(a.esActivo)}</td>
@@ -174,13 +158,17 @@ export default function Almacenes() {
             <form onSubmit={guardar} noValidate>
               <div className="entity-grid">
                 <div className="form-group"><label>Descripción</label>
-                  <input type="text" value={form.descripcion ?? ''} onChange={(e) => set('descripcion', e.target.value)} required /></div>
+                  <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
+                  <CampoError mensajes={errores.de('descripcion')} /></div>
                 <div className="form-group"><label>Tipo</label>
-                  <input type="text" value={form.tipo ?? ''} onChange={(e) => set('tipo', e.target.value)} required /></div>
+                  <input aria-invalid={!!errores.de('tipo')} type="text" value={form.tipo} onChange={(e) => set('tipo', e.target.value)} required />
+                  <CampoError mensajes={errores.de('tipo')} /></div>
                 <div className="form-group"><label>Empresa Id</label>
-                  <input type="number" min={1} step={1} value={form.idEmpresa ?? 0} onChange={(e) => set('idEmpresa', num(e.target.value))} disabled={editando} required /></div>
+                  <input aria-invalid={!!errores.de('idEmpresa')} type="number" min={1} step={1} value={form.idEmpresa} onChange={(e) => set('idEmpresa', num(e.target.value))} disabled={editando} required />
+                  <CampoError mensajes={errores.de('idEmpresa')} /></div>
                 <div className="form-group"><label>UDN Id</label>
-                  <input type="number" min={1} step={1} value={form.idUdn ?? 0} onChange={(e) => set('idUdn', num(e.target.value))} disabled={editando} required /></div>
+                  <input aria-invalid={!!errores.de('idUdn')} type="number" min={1} step={1} value={form.idUdn} onChange={(e) => set('idUdn', num(e.target.value))} disabled={editando} required />
+                  <CampoError mensajes={errores.de('idUdn')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActivo ?? true} onChange={(e) => set('esActivo', e.target.checked)} /> Activo</label>
               </div>
             </form>

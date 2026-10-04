@@ -2,71 +2,61 @@
 // Equivale a getUnidadesNegocio / renderUdnForm / guardarUdn / bajaUdn del panel viejo.
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import CampoError from '../components/CampoError';
 import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
+import { useErroresForm } from '../hooks/useErroresForm';
 import { usePermisos } from '../hooks/usePermisos';
-import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { API, sendJSON } from '../lib/api';
+import type { CreateUnidadNegocio, UnidadNegocio, UpdateUnidadNegocio } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
-// La API lista con id/empresaId y el PUT recibe idUdn/idEmpresa; el
-// formulario trabaja con los nombres del PUT y acepta los dos al leer.
-interface Udn {
-  idUdn: number;
-  id?: number;
-  descripcion?: string;
-  idEmpresa?: number;
-  empresaId?: number;
-  esActiva?: boolean;
-}
-
-const empresaDe = (u: Udn) => u.idEmpresa ?? u.empresaId ?? 0;
-
-const vacio: Udn = { idUdn: 0, descripcion: '', idEmpresa: 0, esActiva: true };
+// La API lista con id/empresaId y el PUT recibe idUdn/idEmpresa: el formulario
+// trabaja con los nombres del PUT (idUdn 0 es alta).
+const vacio: UpdateUnidadNegocio = { idUdn: 0, descripcion: '', idEmpresa: 0, esActiva: true };
+const CAMPOS = ['descripcion', 'idEmpresa'] as const;
 
 export default function UnidadesNegocio() {
-  const { notify } = useUI();
+  const { notify, notifyError } = useUI();
   const { puedeEscribir } = usePermisos();
-  const listado = useListadoPaginado<Udn>(`${API}/Catalogos/unidadesnegocio`);
-  const { items, estado } = listado;
+  const listado = useListadoPaginado<UnidadNegocio>(`${API}/Catalogos/unidadesnegocio`);
+  const { items, estado, errMsg } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
-  const [form, setForm] = useState<Udn>(vacio);
+  const [form, setForm] = useState<UpdateUnidadNegocio>(vacio);
   const [guardando, setGuardando] = useState(false);
+  const errores = useErroresForm(CAMPOS);
 
-  const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
-  const abrirEdicion = (u: Udn) => {
-    setForm({ ...u, idUdn: u.idUdn ?? u.id ?? 0, idEmpresa: empresaDe(u) });
-    setVista('form'); window.scrollTo(0, 0);
+  const abrirForm = (f: UpdateUnidadNegocio) => { setForm(f); errores.limpiar(); setVista('form'); window.scrollTo(0, 0); };
+  const abrirAlta = () => abrirForm(vacio);
+  const abrirEdicion = (u: UnidadNegocio) => abrirForm({
+    idUdn: u.id, descripcion: u.descripcion, idEmpresa: u.empresaId, esActiva: u.esActiva,
+  });
+
+  const set = <K extends keyof UpdateUnidadNegocio>(k: K, v: UpdateUnidadNegocio[K]) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    errores.limpiar(k);
   };
-
-  const set = <K extends keyof Udn>(k: K, v: Udn[K]) => setForm((f) => ({ ...f, [k]: v }));
   const num = (v: string) => Number(v) || 0;
 
   const guardar = async (ev: React.FormEvent) => {
     ev.preventDefault();
-    const idUdn = form.idUdn ?? 0;
+    const { idUdn } = form;
     const isEdit = idUdn > 0;
     const base = {
-      descripcion: (form.descripcion ?? '').trim(),
+      descripcion: form.descripcion.trim(),
       idEmpresa: form.idEmpresa ?? 0,
       esActiva: form.esActiva ?? true,
-    };
-    const payload = isEdit ? { idUdn, ...base } : base;
+    } satisfies CreateUnidadNegocio;
     setGuardando(true);
     try {
-      const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/unidadesnegocio/${idUdn}` : `${API}/Catalogos/unidadesnegocio`, payload,
-      );
-      if (!ok) {
-        const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
-        notify('No se pudo guardar:\n' + lines.map((l) => `• ${l}`).join('\n'), 'danger');
-        return;
-      }
+      if (isEdit) await sendJSON('PUT', `${API}/Catalogos/unidadesnegocio/${idUdn}`, { idUdn, ...base } satisfies UpdateUnidadNegocio);
+      else await sendJSON('POST', `${API}/Catalogos/unidadesnegocio`, base);
       notify(isEdit ? 'UDN actualizada.' : 'UDN creada.', 'success');
       await listado.recargar();
       setVista('lista');
     } catch (err) {
-      notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
+      errores.capturar(err, 'No se pudo guardar la UDN');
     } finally {
       setGuardando(false);
     }
@@ -75,14 +65,11 @@ export default function UnidadesNegocio() {
   const baja = async (idUdn: number) => {
     if (!window.confirm(`¿Dar de baja la UDN ${idUdn}?`)) return;
     try {
-      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Catalogos/unidadesnegocio/${idUdn}`);
-      const aviso = avisoSinPermiso(status, data);
-      if (aviso) { notify(aviso, 'warning'); return; }
-      if (!ok) throw new Error('HTTP ' + status);
+      await sendJSON('DELETE', `${API}/Catalogos/unidadesnegocio/${idUdn}`);
       notify('UDN dada de baja.', 'success');
       await listado.recargar();
-    } catch {
-      notify('No se pudo dar de baja la UDN. Revisa el API.', 'danger');
+    } catch (err) {
+      notifyError(err, 'No se pudo dar de baja la UDN');
     }
   };
 
@@ -108,13 +95,13 @@ export default function UnidadesNegocio() {
                 </thead>
                 <tbody>
                   {estado === 'cargando' && <tr><td colSpan={5} className="text-center text-muted py-4">Cargando…</td></tr>}
-                  {estado === 'error' && <tr><td colSpan={5} className="text-center text-danger py-4">No se pudo cargar.</td></tr>}
+                  {estado === 'error' && <tr><td colSpan={5} className="text-center text-danger py-4">{errMsg || 'No se pudo cargar.'}</td></tr>}
                   {estado === 'ok' && items.length === 0 && <tr><td colSpan={5} className="text-center text-muted py-4">Sin registros.</td></tr>}
                   {estado === 'ok' && items.map((u) => {
-                    const id = u.idUdn ?? u.id ?? 0;
+                    const { id } = u;
                     return (
                       <tr key={id}>
-                        <td>{id}</td><td>{u.descripcion}</td><td>{empresaDe(u)}</td><td>{siNo(u.esActiva)}</td>
+                        <td>{id}</td><td>{u.descripcion}</td><td>{u.empresaId}</td><td>{siNo(u.esActiva)}</td>
                         {puedeEscribir && <td className="text-end">
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(u)}><i className="bi bi-pencil" /></button>
                           <button className="action-btn disable" title="Dar de baja" onClick={() => baja(id)}><i className="bi bi-slash-circle" /></button>
@@ -136,14 +123,16 @@ export default function UnidadesNegocio() {
         </>
       ) : (
         <>
-          <h1 className="page-title fw-bold mb-4">{(form.idUdn ?? 0) > 0 ? `Editar UDN ${form.idUdn}` : 'Nueva UDN'}</h1>
+          <h1 className="page-title fw-bold mb-4">{form.idUdn > 0 ? `Editar UDN ${form.idUdn}` : 'Nueva UDN'}</h1>
           <div className="form-card">
             <form onSubmit={guardar} noValidate>
               <div className="entity-grid">
                 <div className="form-group"><label>Descripción</label>
-                  <input type="text" value={form.descripcion ?? ''} onChange={(e) => set('descripcion', e.target.value)} required /></div>
+                  <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
+                  <CampoError mensajes={errores.de('descripcion')} /></div>
                 <div className="form-group"><label>Empresa Id</label>
-                  <input type="number" min={1} step={1} value={form.idEmpresa ?? 0} onChange={(e) => set('idEmpresa', num(e.target.value))} required /></div>
+                  <input aria-invalid={!!errores.de('idEmpresa')} type="number" min={1} step={1} value={form.idEmpresa ?? 0} onChange={(e) => set('idEmpresa', num(e.target.value))} required />
+                  <CampoError mensajes={errores.de('idEmpresa')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActiva ?? true} onChange={(e) => set('esActiva', e.target.checked)} /> Activa</label>
               </div>
             </form>

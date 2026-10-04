@@ -2,16 +2,19 @@
 // Equivale a getSims / editarSim / guardarSim del panel viejo.
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import CampoError from '../components/CampoError';
 import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
+import { useErroresForm } from '../hooks/useErroresForm';
 import { usePermisos } from '../hooks/usePermisos';
-import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
+import { API, sendJSON } from '../lib/api';
+import type { EstadoSim, SimDet, UpdateSimDet } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { fecha, isoToInput } from '../lib/format';
 
 // Mismos valores que EnumSimDet de la API (Idle=1, Activado=2, Reactivado=3,
 // Suspendido=4, Baja=5).
-const ESTADOS_SIM: Record<number, string> = {
+const ESTADOS_SIM: Record<EstadoSim, string> = {
   1: 'Registrada', 2: 'Activa', 3: 'Reactivada', 4: 'Suspendida', 5: 'Baja',
 };
 
@@ -23,18 +26,20 @@ const ESTADO_POR_NOMBRE: Record<string, number> = {
 const estadoNum = (v: unknown): number =>
   typeof v === 'string' && v in ESTADO_POR_NOMBRE ? ESTADO_POR_NOMBRE[v] : Number(v);
 
-interface Sim {
-  id: number;
-  imsi?: string; iccid?: string; msisdn?: string;
-  idProducto?: number; productoDescripcion?: string;
-  loteTecomnet?: string; loteALtan?: string;
-  fechaRegistro?: string; estadoSim?: number | string;
-  fechaCompra?: string; fechaRecepcion?: string; fechaEntrega?: string;
-  fechaActivacion?: string; fechaSuspencion?: string; fechaReactivacion?: string;
-  fechaInicioFacturacion?: string; fechaBaja?: string;
-  fechaInstalacion?: string; fechaVenta?: string; ultimaFecha?: string;
-  [k: string]: unknown;
-}
+const esEstado = (n: number): n is EstadoSim => n in ESTADOS_SIM;
+
+/** Fechas que se editan: las mismas del PUT. */
+type CampoFecha = Exclude<keyof UpdateSimDet, 'id' | 'estadoSim'>;
+const CAMPOS = [
+  'estadoSim', 'fechaInstalacion', 'fechaActivacion', 'fechaReactivacion', 'fechaSuspencion',
+  'fechaInicioFacturacion', 'fechaVenta', 'ultimaFecha', 'fechaEntrega', 'fechaBaja',
+] as const;
+
+/**
+ * Lo que se edita: la fila del listado con el estado como lo pide el PUT
+ * (número; mientras se elige puede quedar fuera de rango y se valida al guardar).
+ */
+type SimEditable = Omit<SimDet, 'estadoSim'> & { estadoSim: number };
 
 /** Filtros que acepta GET /Catalogos/simdet. */
 interface FiltrosSim {
@@ -52,11 +57,16 @@ export default function Sims() {
   // "form" es lo que se está escribiendo; "filtros" lo ya aplicado (lo que se consulta).
   const [form, setForm] = useState<FiltrosSim>(SIN_FILTROS);
   const [filtros, setFiltros] = useState<FiltrosSim>(SIN_FILTROS);
-  const listado = useListadoPaginado<Sim>(`${API}/Catalogos/simdet`, { ...filtros });
-  const { items, estado } = listado;
+  const listado = useListadoPaginado<SimDet>(`${API}/Catalogos/simdet`, { ...filtros });
+  const { items, estado, errMsg } = listado;
 
-  const [edit, setEdit] = useState<Sim | null>(null);
+  const [edit, setEditState] = useState<SimEditable | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const errores = useErroresForm(CAMPOS);
+  const setEdit = (s: SimDet | null) => {
+    errores.limpiar();
+    setEditState(s && { ...s, estadoSim: estadoNum(s.estadoSim) });
+  };
 
   const setFiltro = (k: keyof FiltrosSim, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const buscar = () => { setFiltros(form); listado.irA(1); };
@@ -68,10 +78,10 @@ export default function Sims() {
     if (!edit) return;
     // El PUT reemplaza: las fechas que no se tocaron se reenvían tal como
     // llegaron del listado, y las que se vaciaron viajan como null.
-    const orNull = (v?: string) => (v ? v : null);
-    const estadoSim = estadoNum(edit.estadoSim);
-    if (!ESTADOS_SIM[estadoSim]) { notify('Selecciona un estado válido.', 'danger'); return; }
-    const payload = {
+    const orNull = (v?: string | null) => (v ? v : null);
+    const { estadoSim } = edit;
+    if (!esEstado(estadoSim)) { notify('Selecciona un estado válido.', 'danger'); return; }
+    const payload: UpdateSimDet = {
       id: edit.id,
       estadoSim,
       fechaInstalacion: orNull(edit.fechaInstalacion),
@@ -86,26 +96,27 @@ export default function Sims() {
     };
     setGuardando(true);
     try {
-      const { ok, status, data } = await sendJSONStatus('PUT', `${API}/Catalogos/simdet/${edit.id}`, payload);
-      const aviso = avisoSinPermiso(status, data);
-      if (aviso) { notify(aviso, 'warning'); return; }
-      if (!ok) throw new Error('HTTP ' + status);
+      await sendJSON('PUT', `${API}/Catalogos/simdet/${edit.id}`, payload);
       notify('SIM actualizada.', 'success');
       setEdit(null);
       await listado.recargar();
     } catch (err) {
-      notify('No se pudo guardar: ' + (err instanceof Error ? err.message : ''), 'danger');
+      errores.capturar(err, 'No se pudo guardar la SIM');
     } finally {
       setGuardando(false);
     }
   };
 
-  const setEditDate = (k: keyof Sim, v: string) => setEdit((s) => (s ? { ...s, [k]: v } : s));
+  const setCampo = <K extends keyof SimEditable>(k: K, v: SimEditable[K]) => {
+    setEditState((s) => (s ? { ...s, [k]: v } : s));
+    errores.limpiar(k);
+  };
 
-  const dateField = (label: string, k: keyof Sim) => (
+  const dateField = (label: string, k: CampoFecha) => (
     <div className="form-group">
       <label>{label}</label>
-      <input type="date" value={isoToInput(edit?.[k] as string)} onChange={(e) => setEditDate(k, e.target.value)} />
+      <input type="date" aria-invalid={!!errores.de(k)} value={isoToInput(edit?.[k] ?? undefined)} onChange={(e) => setCampo(k, e.target.value)} />
+      <CampoError mensajes={errores.de(k)} />
     </div>
   );
 
@@ -142,9 +153,10 @@ export default function Sims() {
             <div className="entity-grid">
               <div className="form-group">
                 <label>Estado Sim</label>
-                <select value={estadoNum(edit.estadoSim) || ''} onChange={(e) => setEditDate('estadoSim', e.target.value)}>
+                <select aria-invalid={!!errores.de('estadoSim')} value={edit.estadoSim || ''} onChange={(e) => setCampo('estadoSim', Number(e.target.value))}>
                   {Object.entries(ESTADOS_SIM).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                 </select>
+                <CampoError mensajes={errores.de('estadoSim')} />
               </div>
               {dateField('F. Instalación', 'fechaInstalacion')}
               {dateField('F. Activación', 'fechaActivacion')}
@@ -176,14 +188,14 @@ export default function Sims() {
           </thead>
           <tbody>
             {estado === 'cargando' && <tr><td colSpan={19} className="text-center text-muted py-4">Cargando…</td></tr>}
-            {estado === 'error' && <tr><td colSpan={19} className="text-center text-danger py-4">Error cargando sims.</td></tr>}
+            {estado === 'error' && <tr><td colSpan={19} className="text-center text-danger py-4">{errMsg || 'Error cargando sims.'}</td></tr>}
             {estado === 'ok' && items.length === 0 && <tr><td colSpan={19} className="text-center text-muted py-4">Sin registros.</td></tr>}
             {estado === 'ok' && items.map((p) => (
               <tr key={p.id}>
                 {puedeEscribir && <td><button className="action-btn edit" title="Editar" onClick={() => setEdit(p)}><i className="bi bi-pencil" /></button></td>}
                 <td>{p.id}</td><td>{p.imsi}</td><td>{p.iccid}</td><td>{p.msisdn}</td><td>{p.idProducto}</td>
                 <td>{p.productoDescripcion}</td><td>{p.loteTecomnet}</td><td>{p.loteALtan}</td><td>{fecha(p.fechaRegistro)}</td>
-                <td>{ESTADOS_SIM[estadoNum(p.estadoSim)] ?? p.estadoSim}</td>
+                <td>{ESTADOS_SIM[estadoNum(p.estadoSim) as EstadoSim] ?? p.estadoSim}</td>
                 <td>{fecha(p.fechaCompra)}</td><td>{fecha(p.fechaRecepcion)}</td><td>{fecha(p.fechaEntrega)}</td>
                 <td>{fecha(p.fechaActivacion)}</td><td>{fecha(p.fechaSuspencion)}</td><td>{fecha(p.fechaReactivacion)}</td>
                 <td>{fecha(p.fechaInicioFacturacion)}</td><td>{fecha(p.fechaBaja)}</td>
