@@ -70,6 +70,7 @@ Inventario/
 ├── DEPLOY.md                  # Guía detallada de despliegue en AWS
 ├── .env.example               # Plantilla de variables del BFF
 ├── .github/workflows/
+│   ├── ci.yml                  # CI: tipos, pruebas y build en cada PR y push a main/develop
 │   └── deploy-lambda.yml       # CI: actualiza el Lambda en cada push a server/
 ├── public/img/                # Logos (Mundo2.png, LetrasTecomnet.png, logo1.png…)
 ├── api/
@@ -85,6 +86,7 @@ Inventario/
 │   ├── index.ts               # Arranque local (dev)
 │   └── lambda.ts              # Handler para AWS Lambda
 ├── src/
+│   ├── test/                  # Pruebas del front (Vitest + Testing Library, jsdom) y setup.ts
 │   ├── main.tsx               # Entry: providers + router + estilos
 │   ├── App.tsx                # Definición de rutas
 │   ├── components/
@@ -249,6 +251,9 @@ Abre http://localhost:5175. El proxy de Vite reenvía `/api/*` al BFF local.
 | `npm run build` | Compila el front a `dist/` (lo que corre Amplify). |
 | `npm run build:lambda` | Empaqueta el BFF en `lambda/index.cjs` (bundle único). |
 | `npm run lint` | ESLint. |
+| `npm test` | Corre todas las pruebas una vez (BFF en Node, front en jsdom). Es lo que corre el CI. |
+| `npm run test:watch` | Pruebas en modo watch. |
+| `npm run test:ui` | Pruebas con la interfaz web de Vitest. |
 | `npm run gen:api` | Regenera `src/lib/api-schema.d.ts` desde `api/swagger.json`. |
 | `npm run gen:api:fetch` | Baja el `swagger.json` de la API local a `api/` y regenera los tipos. |
 | `npm run preview` | Sirve el `dist/` compilado localmente. |
