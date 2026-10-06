@@ -1,7 +1,6 @@
 // Login del panel de Inventario. Estilo idéntico a WebAdmin.
-// La autenticación real aún no existe: el BFF opera en modo "placeholder"
-// (acepta cualquier credencial y crea sesión). Cuando exista el endpoint,
-// solo hay que cambiar AUTH_MODE=api en las variables del Lambda.
+// El BFF valida usuario y contraseña contra POST /api/Auth/login de la API y
+// guarda el token en la cookie de sesión (el navegador nunca lo ve).
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Auth } from '../lib/api';
@@ -12,7 +11,7 @@ import '../styles/login.css';
 export default function Login() {
   const navigate = useNavigate();
   const { reload } = useAuth();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [pass, setPass] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
@@ -34,10 +33,10 @@ export default function Login() {
   const onSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     setError('');
-    if (!email.trim() || !pass) { setError('Captura correo y contraseña.'); return; }
+    if (!username.trim() || !pass) { setError('Captura usuario y contraseña.'); return; }
     setLoading(true);
     try {
-      const res = await Auth.login(email.trim(), pass);
+      const res = await Auth.login(username.trim(), pass);
       if (res.ok && res.data.ok) {
         await reload();
         navigate('/inicio', { replace: true });
@@ -71,11 +70,12 @@ export default function Login() {
 
           <form onSubmit={onSubmit} noValidate>
             <div className="mb-3">
-              <label className="field-label" htmlFor="email">Correo</label>
+              <label className="field-label" htmlFor="username">Usuario</label>
               <div className="field">
-                <i className="bi bi-envelope" />
-                <input type="email" id="email" autoComplete="username" placeholder="correo@tecomnet.com"
-                  value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <i className="bi bi-person" />
+                <input type="text" id="username" autoComplete="username" placeholder="usuario"
+                  autoCapitalize="none" spellCheck={false}
+                  value={username} onChange={(e) => setUsername(e.target.value)} required />
               </div>
             </div>
 

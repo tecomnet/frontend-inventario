@@ -151,15 +151,20 @@ Misma capa visual que el panel WebAdmin, en [`src/styles/admin.css`](./src/style
 
 ## Autenticación
 
-La API de Inventario **todavía no tiene endpoint de login**. Por eso el BFF corre en
-modo *placeholder* (`AUTH_MODE=placeholder`): la pantalla de login existe y crea
-sesión con **cualquier** correo y contraseña (ambos campos no vacíos). La sesión es
-una cookie JWT httpOnly que expira por inactividad (`SESSION_TIMEOUT`, 10 min en el
-front).
+El login manda `{ Username, Password }` al BFF, que lo valida contra
+`POST /api/Auth/login` de la API de Inventario. Si la API responde 2xx con
+`{ token }`, el BFF crea la sesión; si no, devuelve el `mensaje` de la API y no
+crea sesión. Ver [`server/app.ts`](./server/app.ts).
 
-Cuando exista el endpoint real de la API, **no hay que tocar código**: se cambia en
-las variables del Lambda `AUTH_MODE=api` y `AUTH_LOGIN_PATH=/ruta/del/login`, y el
-BFF validará usuario/contraseña contra la API. Ver [`server/app.ts`](./server/app.ts).
+- La sesión es una cookie JWT **httpOnly** firmada que expira por inactividad
+  (`SESSION_TIMEOUT`, 10 min en el front).
+- El token de la API viaja **cifrado** (AES-256-GCM) dentro de esa cookie
+  ([`server/session.ts`](./server/session.ts)). El navegador nunca lo ve: no está en
+  `localStorage`, en `document.cookie` ni en las respuestas del BFF.
+- El proxy agrega `Authorization: Bearer <token>` a cada llamada a la API. Si la API
+  responde 401 (token vencido), el BFF cierra la sesión y el front vuelve a `/login`.
+- `AUTH_MODE=placeholder` (acepta cualquier credencial) solo funciona en desarrollo
+  local. Con `NODE_ENV=production`, y siempre en el Lambda, se ignora.
 
 ---
 
@@ -200,9 +205,9 @@ El front no lleva secretos. Plantilla en [`.env.example`](./.env.example).
 | `API_TIMEOUT` | `30` | Timeout de las llamadas a la API (segundos). |
 | `SESSION_SECRET` | *(obligatorio en prod)* | Firma la cookie de sesión (JWT). |
 | `SESSION_TIMEOUT` | `600` | Inactividad de la sesión (segundos). |
-| `AUTH_MODE` | `placeholder` | `placeholder` (login abierto) o `api` (valida contra la API). |
-| `AUTH_LOGIN_PATH` | `/Auth/Login` | Ruta del login en la API (solo con `AUTH_MODE=api`). |
-| `NODE_ENV` | — | En `production` hace obligatorio `SESSION_SECRET`. |
+| `AUTH_MODE` | `api` | `api` (valida contra la API). `placeholder` (login abierto) solo en desarrollo. |
+| `AUTH_LOGIN_PATH` | `/Auth/login` | Ruta del login relativa a `API_BASE`. |
+| `NODE_ENV` | — | En `production` hace obligatorio `SESSION_SECRET` y desactiva `placeholder`. El Lambda la fija siempre. |
 
 Generar un `SESSION_SECRET`:
 ```bash

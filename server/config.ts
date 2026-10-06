@@ -35,8 +35,9 @@ export const SESSION_SECRET = isProd
   : (process.env.SESSION_SECRET ?? 'dev-only-no-usar-en-produccion');
 
 // ---- Autenticación del login ----
-// 'placeholder': acepta cualquier credencial y crea sesión (aún no hay endpoint
-//                de login real en la API; deja la interfaz lista para conectar).
-// 'api':         valida contra AUTH_LOGIN_PATH de la API de Inventario.
-export const AUTH_MODE = (process.env.AUTH_MODE ?? 'placeholder').toLowerCase();
-export const AUTH_LOGIN_PATH = process.env.AUTH_LOGIN_PATH ?? '/Auth/Login';
+// 'api':         valida contra AUTH_LOGIN_PATH de la API de Inventario (default).
+// 'placeholder': acepta cualquier credencial y crea sesión. SOLO para desarrollo
+//                local: en producción se ignora y se usa 'api' siempre.
+const authModeEnv = (process.env.AUTH_MODE ?? 'api').toLowerCase();
+export const AUTH_MODE = !isProd && authModeEnv === 'placeholder' ? 'placeholder' : 'api';
+export const AUTH_LOGIN_PATH = process.env.AUTH_LOGIN_PATH ?? '/Auth/login';

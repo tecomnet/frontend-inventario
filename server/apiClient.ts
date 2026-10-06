@@ -2,7 +2,7 @@
 //  Cliente HTTP server-side hacia la API de Inventario.
 //  Es un proxy simple: reenvía método, ruta, query y cuerpo tal cual
 //  (JSON o multipart para los importadores) y devuelve la respuesta.
-//  La API de Inventario es abierta, así que NO se inyecta token de app.
+//  Si hay sesión, agrega el token de la API (Authorization: Bearer).
 // ============================================================
 import { API_BASE, API_TIMEOUT } from './config.js';
 
@@ -28,14 +28,17 @@ export interface ApiResult {
  * @param path    ruta + query relativa a API_BASE (p. ej. "/Productos?x=1")
  * @param body    cuerpo crudo (Buffer) o null
  * @param contentType  Content-Type original (se preserva para multipart/JSON)
+ * @param token   token de la API de la sesión (se envía como Bearer)
  */
 export async function apiProxy(
   method: string,
   path: string,
   body: Buffer | null,
   contentType?: string,
+  token?: string | null,
 ): Promise<ApiResult> {
   const headers: Record<string, string> = { Accept: 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
   if (body != null && body.length > 0) {
     if (contentType) headers['Content-Type'] = contentType;
   } else if (method === 'POST' || method === 'PUT') {
