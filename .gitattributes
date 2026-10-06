@@ -1,0 +1,4 @@
+# Los hooks se ejecutan con sh: deben conservar finales de línea LF incluso en
+# Windows (con CRLF fallan con "bad interpreter" / "$'\r': command not found").
+.githooks/* text eol=lf
+*.sh        text eol=lf

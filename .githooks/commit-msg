@@ -1,0 +1,38 @@
+#!/bin/sh
+# Valida que el mensaje de commit referencie un issue de Jira del proyecto KL
+# (Inventario Tecomnet). Instalar con: git config core.hooksPath .githooks
+
+msg_file="$1"
+first_line=$(head -n 1 "$msg_file")
+
+# Commits generados por git (merge, revert, fixup/squash) no requieren clave.
+case "$first_line" in
+  Merge\ *|Revert\ *|fixup!\ *|squash!\ *|amend!\ *) exit 0 ;;
+esac
+
+# La clave puede ir en cualquier parte del mensaje, pero se recomienda al inicio.
+if echo "$first_line" | grep -Eq '\bKL-[0-9]+\b'; then
+  exit 0
+fi
+
+cat >&2 <<'EOF'
+
+  Commit rechazado: falta la clave del issue de Jira.
+
+  El mensaje debe incluir la clave del proyecto KL (Inventario Tecomnet),
+  con el formato:
+
+      KL-123: descripcion breve en imperativo
+
+  Ejemplos validos:
+      KL-45: agrega endpoint POST /api/simdet
+      KL-45: corrige mapeo de MovimientoDetalle
+      KL-45: agrega validacion de existencias #comment listo para QA
+
+  Tu issue esta en:
+      https://desarrollotecomnet-1785873095276.atlassian.net/jira/software/projects/KL/boards/8
+
+  Para saltar la validacion en un caso puntual: git commit --no-verify
+
+EOF
+exit 1

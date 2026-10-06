@@ -1,11 +1,12 @@
 # Inventario · TECOMNET
 
-Panel web de inventario de TECOMNET. Es la migración del panel original en
-JavaScript vanilla (conservado en [`legacy/`](./legacy)) a la misma arquitectura,
-estilos y esquema de despliegue que el panel `WebAdmin`.
+Panel web de inventario de TECOMNET. Comparte arquitectura, estilos y esquema de
+despliegue con el panel `WebAdmin`.
 
 - **App en vivo:** https://main.d1abw560spc16b.amplifyapp.com
-- **Repositorio:** https://github.com/AlexDommi/Inventario
+- **Repositorio:** https://github.com/tecomnet/frontend-inventario
+- **API:** https://github.com/tecomnet/inventario
+- **Cómo contribuir:** [`CONTRIBUTING.md`](./CONTRIBUTING.md) (ramas, commits `KL-###`, PR y revisión)
 
 ---
 
@@ -68,8 +69,13 @@ Inventario/
 ├── amplify.yml                # Build settings de Amplify Hosting
 ├── DEPLOY.md                  # Guía detallada de despliegue en AWS
 ├── .env.example               # Plantilla de variables del BFF
-├── .github/workflows/
-│   └── deploy-lambda.yml       # CI: actualiza el Lambda en cada push a server/
+├── CONTRIBUTING.md            # Flujo de trabajo: ramas, commits, PR y revisión
+├── .githooks/                 # Hooks que exigen la clave KL-### en cada commit
+├── .github/
+│   ├── pull_request_template.md
+│   └── workflows/
+│       ├── deploy-lambda.yml   # CI: actualiza el Lambda en cada push a server/
+│       └── jira-convention.yml # CI: valida KL-### en el título y los commits del PR
 ├── public/img/                # Logos (Mundo2.png, LetrasTecomnet.png, logo1.png…)
 ├── server/                    # BFF (Express) — se empaqueta como Lambda
 │   ├── app.ts                 # Rutas: /api/auth y proxy genérico /api/*
@@ -98,7 +104,6 @@ Inventario/
 │   └── styles/
 │       ├── admin.css           # Estilos del panel
 │       └── login.css           # Estilos del login (scoped a .login-page)
-└── legacy/                    # App original en JS vanilla (referencia)
 ```
 
 ---
@@ -106,7 +111,7 @@ Inventario/
 ## Módulos
 
 Todas las páginas viven en [`src/pages/`](./src/pages) y consumen la API a través
-del BFF. Se conservó toda la funcionalidad del panel original.
+del BFF.
 
 | Módulo | Página | Endpoints (vía `/api`) |
 |---|---|---|
@@ -213,6 +218,8 @@ Abre http://localhost:5175. El proxy de Vite reenvía `/api/*` al BFF local.
 | `npm run build` | Compila el front a `dist/` (lo que corre Amplify). |
 | `npm run build:lambda` | Empaqueta el BFF en `lambda/index.cjs` (bundle único). |
 | `npm run lint` | ESLint. |
+| `npm run format -- <archivos>` | Formatea con Prettier los archivos indicados. |
+| `npm run format:check -- <archivos>` | Revisa el formato sin modificar. |
 | `npm run preview` | Sirve el `dist/` compilado localmente. |
 
 ---
@@ -277,10 +284,3 @@ Cuenta `607700978058`, región `us-east-1`:
 | Function URL | `https://n7sdjbanxoujswtfxlkmnbjhzi0atdqx.lambda-url.us-east-1.on.aws/` |
 | Rol de ejecución | `inventario-bff-role` |
 | Usuario IAM de CI | `inventario-ci-deployer` (solo `lambda:UpdateFunctionCode`) |
-
----
-
-## Legacy
-
-La aplicación original en JavaScript vanilla se conservó en [`legacy/`](./legacy)
-como referencia. No se usa en el despliegue.

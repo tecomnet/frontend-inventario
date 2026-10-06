@@ -1,0 +1,46 @@
+name: Convención Jira
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  validar-clave-jira:
+    name: Clave KL en título y commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validar título del PR
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if ! grep -Eq '\bKL-[0-9]+\b' <<< "$PR_TITLE"; then
+            echo "::error::El título del PR debe incluir la clave del issue, ej: 'KL-45: agrega endpoint POST /api/simdet'"
+            exit 1
+          fi
+          echo "Título OK: $PR_TITLE"
+
+      - name: Validar commits del PR
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          fallidos=0
+          while IFS= read -r linea; do
+            [ -z "$linea" ] && continue
+            case "$linea" in
+              Merge\ *|Revert\ *|fixup!\ *|squash!\ *|amend!\ *) continue ;;
+            esac
+            if ! grep -Eq '\bKL-[0-9]+\b' <<< "$linea"; then
+              echo "::error::Commit sin clave de Jira: $linea"
+              fallidos=1
+            fi
+          done < <(git log --no-merges --format=%s "$BASE_SHA..$HEAD_SHA")
+          if [ "$fallidos" -ne 0 ]; then
+            echo "Formato esperado: 'KL-123: descripción breve en imperativo'"
+            exit 1
+          fi
+          echo "Todos los commits referencian un issue de KL."
