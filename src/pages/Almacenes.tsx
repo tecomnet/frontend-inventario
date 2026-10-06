@@ -1,9 +1,11 @@
 // Administración de Almacenes (alta, edición, baja).
 // Equivale a getAlmacenes / renderAlmacenForm / guardarAlmacen / bajaAlmacen del panel viejo.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
-import { API, getJSON, sendJSONStatus } from '../lib/api';
+import { API, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
 interface Almacen {
@@ -20,24 +22,11 @@ const vacio: Almacen = { idAlmacen: 0, descripcion: '', tipo: '', idEmpresa: 0, 
 
 export default function Almacenes() {
   const { notify } = useUI();
-  const [items, setItems] = useState<Almacen[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
+  const listado = useListadoPaginado<Almacen>(`${API}/Catalogos/almacenes`);
+  const { items, estado } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Almacen>(vacio);
   const [guardando, setGuardando] = useState(false);
-
-  const cargar = async () => {
-    setEstado('cargando');
-    try {
-      const data = await getJSON<Almacen[]>(`${API}/Catalogos/almacenes`);
-      setItems(Array.isArray(data) ? data : []);
-      setEstado('ok');
-    } catch {
-      setEstado('error');
-    }
-  };
-
-  useEffect(() => { void cargar(); }, []);
 
   const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (a: Almacen) => {
@@ -71,7 +60,7 @@ export default function Almacenes() {
         return;
       }
       notify(isEdit ? 'Almacén actualizado.' : 'Almacén creado.', 'success');
-      await cargar();
+      await listado.recargar();
       setVista('lista');
     } catch (err) {
       notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
@@ -88,7 +77,7 @@ export default function Almacenes() {
       const { ok, status } = await sendJSONStatus('DELETE', `${API}/Catalogos/almacenes`, { idAlmacen, idEmpresa: a.idEmpresa, idUdn: a.idUdn });
       if (!ok) throw new Error('HTTP ' + status);
       notify('Almacén dado de baja.', 'success');
-      await cargar();
+      await listado.recargar();
     } catch {
       notify('No se pudo dar de baja el almacén. Revisa el API.', 'danger');
     }
@@ -134,6 +123,13 @@ export default function Almacenes() {
               </table>
             </div>
           </div>
+
+          <Paginacion
+            page={listado.page} pageSize={listado.pageSize}
+            totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+            onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+            etiqueta="almacenes"
+          />
         </>
       ) : (
         <>

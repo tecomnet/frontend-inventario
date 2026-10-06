@@ -1,9 +1,11 @@
 // Administración de Proveedores (alta, edición). Sin baja.
 // Equivale a getProveedores / renderProveedorForm / guardarProveedor del panel viejo.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
-import { API, getJSON, sendJSONStatus } from '../lib/api';
+import { API, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
 interface Proveedor {
@@ -18,24 +20,11 @@ const vacio: Proveedor = { id: 0, descripcion: '', contacto: '', diasCredito: 0,
 
 export default function Proveedores() {
   const { notify } = useUI();
-  const [items, setItems] = useState<Proveedor[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
+  const listado = useListadoPaginado<Proveedor>(`${API}/Catalogos/proveedores`);
+  const { items, estado } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Proveedor>(vacio);
   const [guardando, setGuardando] = useState(false);
-
-  const cargar = async () => {
-    setEstado('cargando');
-    try {
-      const data = await getJSON<Proveedor[]>(`${API}/Catalogos/proveedores`);
-      setItems(Array.isArray(data) ? data : []);
-      setEstado('ok');
-    } catch {
-      setEstado('error');
-    }
-  };
-
-  useEffect(() => { void cargar(); }, []);
 
   const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (p: Proveedor) => { setForm({ ...p }); setVista('form'); window.scrollTo(0, 0); };
@@ -64,7 +53,7 @@ export default function Proveedores() {
         return;
       }
       notify(isEdit ? 'Proveedor actualizado.' : 'Proveedor creado.', 'success');
-      await cargar();
+      await listado.recargar();
       setVista('lista');
     } catch (err) {
       notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
@@ -111,6 +100,13 @@ export default function Proveedores() {
               </table>
             </div>
           </div>
+
+          <Paginacion
+            page={listado.page} pageSize={listado.pageSize}
+            totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+            onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+            etiqueta="proveedores"
+          />
         </>
       ) : (
         <>

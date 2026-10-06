@@ -1,9 +1,11 @@
 // Administración de Productos (alta, edición, baja).
 // Equivale a getProductos / renderProductoForm / bajaProducto del panel viejo.
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
-import { API, getJSON, sendJSONStatus } from '../lib/api';
+import { API, sendJSONStatus } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
 interface Producto {
@@ -31,24 +33,11 @@ const vacio: Producto = {
 
 export default function Productos() {
   const { notify } = useUI();
-  const [items, setItems] = useState<Producto[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
+  const listado = useListadoPaginado<Producto>(`${API}/Productos`);
+  const { items, estado } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Producto>(vacio);
   const [guardando, setGuardando] = useState(false);
-
-  const cargar = async () => {
-    setEstado('cargando');
-    try {
-      const data = await getJSON<Producto[]>(`${API}/Productos`);
-      setItems(Array.isArray(data) ? data : []);
-      setEstado('ok');
-    } catch {
-      setEstado('error');
-    }
-  };
-
-  useEffect(() => { void cargar(); }, []);
 
   const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (p: Producto) => {
@@ -86,7 +75,7 @@ export default function Productos() {
         return;
       }
       notify(isEdit ? 'Producto actualizado.' : 'Producto creado.', 'success');
-      await cargar();
+      await listado.recargar();
       setVista('lista');
     } catch (err) {
       notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
@@ -101,7 +90,7 @@ export default function Productos() {
       const { ok, status } = await sendJSONStatus('DELETE', `${API}/Productos`, { id });
       if (!ok) throw new Error('HTTP ' + status);
       notify('Producto dado de baja.', 'success');
-      await cargar();
+      await listado.recargar();
     } catch {
       notify('No se pudo dar de baja el producto. Revisa el API.', 'danger');
     }
@@ -147,6 +136,13 @@ export default function Productos() {
               </table>
             </div>
           </div>
+
+          <Paginacion
+            page={listado.page} pageSize={listado.pageSize}
+            totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+            onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+            etiqueta="productos"
+          />
         </>
       ) : (
         <>

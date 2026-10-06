@@ -1,7 +1,8 @@
 // Listado de Existencias. Equivale a getExistencias del panel viejo.
-import { useEffect, useState } from 'react';
 import AppLayout from '../components/AppLayout';
-import { API, getJSON } from '../lib/api';
+import Paginacion from '../components/Paginacion';
+import { API } from '../lib/api';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 
 interface Existencia {
   empresaId?: number; udnId?: number; almacenId?: number;
@@ -9,20 +10,8 @@ interface Existencia {
 }
 
 export default function Existencias() {
-  const [items, setItems] = useState<Existencia[]>([]);
-  const [estado, setEstado] = useState<'cargando' | 'ok' | 'error'>('cargando');
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await getJSON<Existencia[]>(`${API}/Existencias`);
-        setItems(Array.isArray(data) ? data : []);
-        setEstado('ok');
-      } catch {
-        setEstado('error');
-      }
-    })();
-  }, []);
+  const listado = useListadoPaginado<Existencia>(`${API}/Existencias`);
+  const { items, estado } = listado;
 
   return (
     <AppLayout active="existencias">
@@ -56,6 +45,13 @@ export default function Existencias() {
           </table>
         </div>
       </div>
+
+      <Paginacion
+        page={listado.page} pageSize={listado.pageSize}
+        totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+        onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+        etiqueta="existencias"
+      />
     </AppLayout>
   );
 }
