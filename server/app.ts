@@ -6,10 +6,11 @@
 //  cada petición (incluidas las multipart de los importadores) con el
 //  Authorization: Bearer de la sesión, que la API exige desde KL-7.
 //
-//  Los tres casos de error de autorización se responden distintos:
+//  Los errores que el front necesita distinguir se responden distintos:
 //    401 sin-sesion      -> no hay sesión de panel (401 propio del BFF).
 //    401 token-expirado  -> la API rechazó el token: se cierra la sesión.
 //    403 sinPermiso      -> falta permiso: la sesión NO se toca.
+//    502 sinConexion     -> la API no respondió (red, DNS, timeout).
 // ============================================================
 import express, { type Request, type Response } from 'express';
 import cookieParser from 'cookie-parser';
@@ -19,6 +20,21 @@ import {
   getSession, setSession, clearSession, type Sesion, type Usuario,
 } from './session.js';
 import { AUTH_MODE, AUTH_LOGIN_PATH } from './config.js';
+
+// La API firma el rol dos veces (AuthController): como "role" y como la URI
+// de ClaimTypes.Role. Cada una puede venir como texto o como arreglo si el
+// usuario tuviera varios roles; en ese caso se queda el de mayor alcance.
+const CLAIM_ROL_URI = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
+const ROLES_POR_ALCANCE = ['admin', 'writer', 'reader'];
+
+function rolDelToken(token: string): string | null {
+  const claims = (jwt.decode(token) ?? {}) as Record<string, unknown>;
+  const roles = [claims.role, claims[CLAIM_ROL_URI]]
+    .flat()
+    .filter((r): r is string => typeof r === 'string' && r.trim() !== '')
+    .map((r) => r.trim().toLowerCase());
+  return ROLES_POR_ALCANCE.find((r) => roles.includes(r)) ?? roles[0] ?? null;
+}
 
 export function createApp() {
   const app = express();
@@ -87,7 +103,11 @@ export function createApp() {
       // MODO PLACEHOLDER (solo fuera de producción, ver config.ts): acepta
       // cualquier credencial y crea sesión sin token de API.
       if (AUTH_MODE === 'placeholder') {
-        setSession(req, res, { user: { NombreUsuario: username, Nombre: username }, token: null });
+        // Rol admin para que en local se vea el panel completo, como hoy.
+        setSession(req, res, {
+          user: { NombreUsuario: username, Nombre: username, Rol: 'admin' },
+          token: null,
+        });
         return res.json({ ok: true });
       }
 
@@ -108,11 +128,12 @@ export function createApp() {
         if (!token) {
           return res.status(502).json({ ok: false, mensaje: 'La API no devolvió un token.' });
         }
-        // Rol del usuario, leído de los claims del token (solo para mostrarlo;
-        // quien valida el token es la API en cada petición).
-        const claims = (jwt.decode(token) ?? {}) as Record<string, unknown>;
+        // Rol del usuario, leído de los claims del token. Solo sirve para la
+        // experiencia (mostrarlo y ocultar acciones); quien decide de verdad
+        // es la API, que valida el token y su rol en cada petición.
         const user: Usuario = { NombreUsuario: username, Nombre: username };
-        if (typeof claims.role === 'string') user.Rol = claims.role;
+        const rol = rolDelToken(token);
+        if (rol) user.Rol = rol;
         setSession(req, res, { user, token });
         // Solo { ok }: el token nunca sale hacia el navegador.
         return res.json({ ok: true });
@@ -200,8 +221,17 @@ export function createApp() {
       return res.status(403).json({ error: msg, title: msg, sinPermiso: true });
     }
 
+    // Sin respuesta de la API (red, DNS, timeout): 502 con "sinConexion" para
+    // que el front lo distinga de un error que sí devolvió la API.
+    if (code === 0) {
+      return res.status(502).json({
+        error: 'No hay conexión con la API de Inventario.',
+        sinConexion: true,
+      });
+    }
+
     res
-      .status(code || 502)
+      .status(code)
       .type(respType)
       .send(resp !== '' ? resp : JSON.stringify({ ok: code >= 200 && code < 400 }));
   });

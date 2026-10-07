@@ -101,6 +101,28 @@ body { min-height: 100vh; background: #f3f4f6; font-family: var(--tec-font); }
 }
 .layout.collapsed .edge-toggle { left: 12px; }
 
+/* ===== Encabezado: usuario y rol de la sesión ===== */
+.topbar {
+  display: flex; justify-content: flex-end; align-items: center;
+  padding: .9rem 1.5rem 0;
+}
+.usuario-sesion {
+  display: inline-flex; align-items: center; gap: .5rem;
+  font-size: .88rem; color: #475569; min-width: 0;
+}
+.usuario-sesion > i { font-size: 1.15rem; color: #64748b; }
+.usuario-nombre { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rol-badge {
+  flex-shrink: 0; padding: .15rem .6rem; border-radius: 999px;
+  font-size: .72rem; font-weight: 700; letter-spacing: .02em;
+  background: #e5e7eb; color: #374151;
+}
+.rol-badge.rol-admin { background: #dbeafe; color: var(--tec-green-dark); }
+.rol-badge.rol-writer { background: #dcfce7; color: #166534; }
+.rol-badge.rol-reader { background: #fef3c7; color: #92400e; }
+/* Con el menú colapsado, deja libre el botón flotante del borde. */
+.layout.collapsed .topbar { padding-left: 3.75rem; }
+
 .content { padding: 1.5rem 1.5rem 2rem 1.5rem; }
 .layout.collapsed .content { padding-left: 3.75rem; }
 
@@ -246,6 +268,17 @@ body.home .page-title { font-size: 2.75rem; font-weight: 700; color: #1f2937; }
   outline: none; border-color: var(--tec-green); box-shadow: 0 0 0 .2rem rgba(29,78,216,.15);
 }
 .form-group small { color: #6b7280; font-weight: 400; }
+
+/* Error de validación de la API junto al campo (CampoError + aria-invalid). */
+.form-group input[aria-invalid="true"], .form-group select[aria-invalid="true"],
+.form-control[aria-invalid="true"] {
+  border-color: #dc3545;
+}
+.form-group input[aria-invalid="true"]:focus, .form-group select[aria-invalid="true"]:focus,
+.form-control[aria-invalid="true"]:focus {
+  border-color: #dc3545; box-shadow: 0 0 0 .2rem rgba(220,53,69,.15);
+}
+.campo-error { color: #dc3545; font-size: .82rem; margin-top: .3rem; }
 
 /* ===== Importador: drop-zone ===== */
 .drop-zone {

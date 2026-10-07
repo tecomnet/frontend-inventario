@@ -16,6 +16,7 @@ despliegue con el panel `WebAdmin`.
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Módulos](#módulos)
 - [Autenticación](#autenticación)
+- [Errores y tipos de la API](#errores-y-tipos-de-la-api)
 - [Desarrollo local](#desarrollo-local)
 - [Scripts](#scripts)
 - [Variables de entorno](#variables-de-entorno)
@@ -77,6 +78,10 @@ Inventario/
 │       ├── deploy-lambda.yml   # CI: actualiza el Lambda en cada push a server/
 │       └── jira-convention.yml # CI: valida KL-### en el título y los commits del PR
 ├── public/img/                # Logos (Mundo2.png, LetrasTecomnet.png, logo1.png…)
+├── api/
+│   └── swagger.json            # Contrato de la API (copia versionada; ver gen:api)
+├── scripts/
+│   └── gen-api.mjs             # npm run gen:api: tipos desde api/swagger.json
 ├── server/                    # BFF (Express) — se empaqueta como Lambda
 │   ├── app.ts                 # Rutas: /api/auth y proxy genérico /api/*
 │   ├── apiClient.ts           # Proxy HTTP hacia la API (inyecta Authorization: Bearer)
@@ -93,12 +98,18 @@ Inventario/
 │   │   ├── RequireAuth.tsx     # Guard de rutas (exige sesión)
 │   │   ├── DynamicTable.tsx    # Tabla para resultados de consulta
 │   │   ├── DescripcionCatalog.tsx # Catálogo genérico { id, descripcion }
+│   │   ├── CampoError.tsx      # Error de validación junto a un campo
 │   │   └── NodeNetwork.tsx     # Fondo animado del login
 │   ├── context/
 │   │   ├── AuthContext.tsx     # Sesión, inactividad, logout
-│   │   └── UIContext.tsx       # Toasts (notify) + overlay de carga
+│   │   └── UIContext.tsx       # Toasts (notify, notifyError) + overlay de carga
+│   ├── hooks/
+│   │   └── useErroresForm.ts   # Errores de validación por campo de un formulario
 │   ├── lib/
-│   │   ├── api.ts              # Cliente HTTP hacia el BFF (/api/*)
+│   │   ├── api.ts              # Cliente HTTP hacia el BFF (/api/*); lanza ApiError
+│   │   ├── errores.ts          # Mensaje claro por status (400, 403, 404, 409, 5xx, sin conexión)
+│   │   ├── api-schema.d.ts     # GENERADO por npm run gen:api (no editar)
+│   │   ├── api-types.ts        # Tipos de peticiones y respuestas que usan las pantallas
 │   │   └── format.ts           # Helpers de formato (fechas, celdas…)
 │   ├── pages/                 # Una página por módulo (ver abajo)
 │   └── styles/
@@ -196,6 +207,31 @@ manda al login como token vencido.
 
 ---
 
+## Errores y tipos de la API
+
+**Errores.** `getJSON`, `sendJSON` y `sendForm` lanzan un `ApiError` (`status`, mensaje, `errores` por campo, `sinConexion`) cuando la respuesta no es 2xx o no hubo respuesta; nunca devuelven el cuerpo de un error como si fueran datos. Las pantallas no interpretan `errors`/`title`/`message` por su cuenta:
+
+- Acciones (guardar, dar de baja, importar): `notifyError(err, 'No se pudo …')` de `UIContext` muestra un único aviso con el mensaje según el status (400, 403, 404, 409, 5xx con folio, sin conexión). Un 401 no muestra nada: ya redirige al login.
+- Formularios: `useErroresForm(CAMPOS)` + `<CampoError mensajes={errores.de('campo')} />` muestran cada error de validación junto a su campo; los que no corresponden a un campo visible se listan en el aviso.
+- Listados y consultas: el mensaje se muestra en la propia tabla (`errMsg` de `useListadoPaginado` o `describirError(err).mensaje`).
+
+Si la API no responde, el BFF contesta `502 { sinConexion: true }` y el front lo muestra como "Sin conexión con la API".
+
+**Tipos.** Las pantallas importan sus tipos de `src/lib/api-types.ts`, nunca declaran interfaces propias de la API:
+
+- Peticiones (`Create*`/`Update*`) y respuestas (`*Dto`) son alias de `src/lib/api-schema.d.ts`, generado con `npm run gen:api`. Si la API cambia el contrato, al regenerar el build marca las pantallas desalineadas.
+- Los pocos campos que el front usa y la API aún no publica (p. ej. `idLineaPadre` de `LineaDto`) se agregan en `api-types.ts` con un comentario.
+
+```bash
+npm run gen:api            # genera desde api/swagger.json (no necesita la API)
+npm run gen:api:fetch      # baja el contrato de inventarioBE local (https://localhost:50005), lo guarda y genera
+SWAGGER_URL=https://otra/swagger/v1/swagger.json npm run gen:api:fetch
+```
+
+`api/swagger.json` y el archivo generado se versionan: el build y el CI no dependen de que la API esté arriba y los cambios de contrato se ven en el diff del PR.
+
+---
+
 ## Desarrollo local
 
 Requisitos: Node.js 20+ (probado en 24).
@@ -220,6 +256,8 @@ Abre http://localhost:5175. El proxy de Vite reenvía `/api/*` al BFF local.
 | `npm run lint` | ESLint. |
 | `npm run format -- <archivos>` | Formatea con Prettier los archivos indicados. |
 | `npm run format:check -- <archivos>` | Revisa el formato sin modificar. |
+| `npm run gen:api` | Regenera `src/lib/api-schema.d.ts` desde `api/swagger.json`. |
+| `npm run gen:api:fetch` | Baja el `swagger.json` de la API local a `api/` y regenera los tipos. |
 | `npm run preview` | Sirve el `dist/` compilado localmente. |
 
 ---
