@@ -24,6 +24,8 @@ export interface Usuario {
   Email?: string;
   Nombre?: string;
   NombreUsuario?: string;
+  /** Rol del claim "role" del token de la API (reader, writer o admin). */
+  Rol?: string;
   [k: string]: unknown;
 }
 

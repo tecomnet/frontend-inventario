@@ -2,11 +2,15 @@
 // Equivale a renderImportador / enviarImportador del panel viejo.
 import { useRef, useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import SinPermiso from '../components/SinPermiso';
 import { useUI } from '../context/UIContext';
+import { usePermisos } from '../hooks/usePermisos';
 import { API, sendForm } from '../lib/api';
+import type { ResultadoImportacion } from '../lib/api-types';
 
 export default function Importador() {
-  const { notify } = useUI();
+  const { notify, notifyError } = useUI();
+  const { puedeEscribir } = usePermisos();
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -34,19 +38,16 @@ export default function Importador() {
     form.append('dtFechaCompra', fecha);
     setEnviando(true);
     try {
-      const { ok, data } = await sendForm<{ exito?: boolean; total?: number; errores?: unknown }>(
-        `${API}/importador/importador`,
-        form,
-      );
-      if (!ok || !data?.exito) {
-        const errs = (data?.errores ?? ['Error del servidor']) as unknown;
-        const lista = Array.isArray(errs) ? errs : [errs];
+      const data = await sendForm<Partial<ResultadoImportacion> | undefined>(`${API}/importador/importador`, form);
+      // La API responde 200 con exito=false cuando el archivo trae errores.
+      if (!data?.exito) {
+        const lista = data?.errores?.length ? data.errores : ['La API no detalló el error.'];
         notify('Error en la importación:\n' + lista.map((e) => `• ${e}`).join('\n'), 'danger');
         return;
       }
       notify(`Importación exitosa. Registros: ${data.total ?? 0}`, 'success');
     } catch (err) {
-      notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
+      notifyError(err, 'No se pudo importar el archivo');
     } finally {
       setEnviando(false);
     }
@@ -60,6 +61,7 @@ export default function Importador() {
         <p className="page-subtitle">Carga tu archivo y configura los datos del lote.</p>
       </div>
 
+      {!puedeEscribir ? <SinPermiso /> : (
       <div className="form-card">
         <div
           className={`drop-zone${dragging ? ' active' : ''}`}
@@ -88,6 +90,7 @@ export default function Importador() {
           <i className="bi bi-upload" /> {enviando ? 'Importando…' : 'Importar archivo'}
         </button>
       </div>
+      )}
     </AppLayout>
   );
 }

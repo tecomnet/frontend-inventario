@@ -3,13 +3,12 @@
 import AppLayout from '../components/AppLayout';
 import Paginacion from '../components/Paginacion';
 import { API } from '../lib/api';
+import type { TipoTransaccion } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 
-interface Tipo { id: number; descripcion?: string; naturaleza?: string }
-
 export default function TiposTransaccion() {
-  const listado = useListadoPaginado<Tipo>(`${API}/Catalogos/tipostransaccion`);
-  const { items, estado } = listado;
+  const listado = useListadoPaginado<TipoTransaccion>(`${API}/Catalogos/tipostransaccion`);
+  const { items, estado, errMsg } = listado;
 
   return (
     <AppLayout active="tipos-transaccion">
@@ -28,7 +27,7 @@ export default function TiposTransaccion() {
                 <tr><td colSpan={3} className="text-center text-muted py-4">Cargando…</td></tr>
               )}
               {estado === 'error' && (
-                <tr><td colSpan={3} className="text-center text-danger py-4">No se pudo cargar.</td></tr>
+                <tr><td colSpan={3} className="text-center text-danger py-4">{errMsg || 'No se pudo cargar.'}</td></tr>
               )}
               {estado === 'ok' && items.length === 0 && (
                 <tr><td colSpan={3} className="text-center text-muted py-4">Sin registros.</td></tr>

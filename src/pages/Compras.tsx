@@ -3,12 +3,14 @@ import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
 import { API, getJSON } from '../lib/api';
+import { describirError } from '../lib/errores';
 
 export default function Compras() {
   const [empresaId, setEmpresaId] = useState('');
   const [udnId, setUdnId] = useState('');
   const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error'>('idle');
   const [payload, setPayload] = useState<unknown>(null);
+  const [errMsg, setErrMsg] = useState('');
 
   const consultar = async (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -19,7 +21,8 @@ export default function Compras() {
       );
       setPayload(res);
       setEstado('ok');
-    } catch {
+    } catch (err) {
+      setErrMsg(describirError(err).mensaje);
       setEstado('error');
     }
   };
@@ -52,7 +55,7 @@ export default function Compras() {
         )}
         {estado === 'cargando' && <div className="loading-state">Consultando compras…</div>}
         {estado === 'error' && (
-          <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando compras</h2><p>Revisa los parámetros o el API.</p></div>
+          <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando compras</h2><p>{errMsg}</p></div>
         )}
         {estado === 'ok' && (
           <DynamicTable payload={payload} emptyTitle="Sin resultados" emptyMessage="No se encontraron compras." />

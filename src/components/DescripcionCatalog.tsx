@@ -1,14 +1,18 @@
 // Catálogo genérico de un solo campo "descripcion" (Marcas, Presentaciones,
 // Unidades de Medida). Lista + formulario de alta/edición contra un endpoint
-// que expone GET/POST/PUT sobre { id, descripcion }.
+// que expone GET/POST sobre la URL y PUT sobre {url}/{id} con { id, descripcion }.
 import { useState } from 'react';
 import AppLayout from './AppLayout';
+import CampoError from './CampoError';
 import Paginacion from './Paginacion';
 import { useUI } from '../context/UIContext';
-import { sendJSONStatus } from '../lib/api';
+import { useErroresForm } from '../hooks/useErroresForm';
+import { usePermisos } from '../hooks/usePermisos';
+import { sendJSON } from '../lib/api';
+import type { CatalogoDescripcion, CreateDescripcion, UpdateDescripcion } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 
-interface Item { id: number; descripcion?: string }
+const CAMPOS = ['descripcion'] as const;
 
 interface Props {
   active: string;
@@ -19,34 +23,36 @@ interface Props {
 
 export default function DescripcionCatalog({ active, titulo, singular, url }: Props) {
   const { notify } = useUI();
-  const listado = useListadoPaginado<Item>(url);
+  const { puedeEscribir } = usePermisos();
+  const listado = useListadoPaginado<CatalogoDescripcion>(url);
   const { items, estado, errMsg } = listado;
 
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [desc, setDesc] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const errores = useErroresForm(CAMPOS);
 
-  const abrirAlta = () => { setEditingId(null); setDesc(''); setVista('form'); window.scrollTo(0, 0); };
-  const abrirEdicion = (c: Item) => {
-    setEditingId(c.id); setDesc(c.descripcion || ''); setVista('form'); window.scrollTo(0, 0);
+  const abrirForm = (id: number | null, descripcion: string) => {
+    setEditingId(id); setDesc(descripcion); errores.limpiar(); setVista('form'); window.scrollTo(0, 0);
   };
+  const abrirAlta = () => abrirForm(null, '');
+  const abrirEdicion = (c: CatalogoDescripcion) => abrirForm(c.id, c.descripcion);
 
   const guardar = async (ev: React.FormEvent) => {
     ev.preventDefault();
     const d = desc.trim();
     if (!d) { notify(`La descripción es obligatoria.`); return; }
     const isEdit = editingId !== null;
-    const payload = isEdit ? { id: editingId, descripcion: d } : { descripcion: d };
     setGuardando(true);
     try {
-      const { ok, status } = await sendJSONStatus(isEdit ? 'PUT' : 'POST', url, payload);
-      if (!ok) throw new Error('HTTP ' + status);
+      if (isEdit) await sendJSON('PUT', `${url}/${editingId}`, { id: editingId, descripcion: d } satisfies UpdateDescripcion);
+      else await sendJSON('POST', url, { descripcion: d } satisfies CreateDescripcion);
       notify(isEdit ? `${singular} actualizada.` : `${singular} creada.`, 'success');
       await listado.recargar();
       setVista('lista'); setEditingId(null);
     } catch (err) {
-      notify('No se pudo guardar: ' + (err instanceof Error ? err.message : ''), 'danger');
+      errores.capturar(err, `No se pudo guardar: ${singular.toLowerCase()}`);
     } finally {
       setGuardando(false);
     }
@@ -61,23 +67,25 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">{titulo}</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}>
-              <i className="bi bi-plus-lg" /> Nuevo
-            </button>
+            {puedeEscribir && (
+              <button className="btn btn-tec" onClick={abrirAlta}>
+                <i className="bi bi-plus-lg" /> Nuevo
+              </button>
+            )}
           </div>
 
           <div className="table-card p-3">
             <div className="table-responsive">
               <table className="table table-cat align-middle">
                 <thead>
-                  <tr><th>Id</th><th>Descripción</th><th className="text-end">Acciones</th></tr>
+                  <tr><th>Id</th><th>Descripción</th>{puedeEscribir && <th className="text-end">Acciones</th>}</tr>
                 </thead>
                 <tbody>
                   {estado === 'cargando' && (
                     <tr><td colSpan={3} className="text-center text-muted py-4">Cargando…</td></tr>
                   )}
                   {estado === 'error' && (
-                    <tr><td colSpan={3} className="text-center text-danger py-4">No se pudo cargar ({errMsg}).</td></tr>
+                    <tr><td colSpan={3} className="text-center text-danger py-4">{errMsg || 'No se pudo cargar.'}</td></tr>
                   )}
                   {estado === 'ok' && items.length === 0 && (
                     <tr><td colSpan={3} className="text-center text-muted py-4">Sin registros.</td></tr>
@@ -86,11 +94,13 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
                     <tr key={c.id}>
                       <td>{c.id}</td>
                       <td>{c.descripcion}</td>
-                      <td className="text-end">
-                        <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(c)}>
-                          <i className="bi bi-pencil" />
-                        </button>
-                      </td>
+                      {puedeEscribir && (
+                        <td className="text-end">
+                          <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(c)}>
+                            <i className="bi bi-pencil" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -114,8 +124,9 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
             <form onSubmit={guardar} noValidate>
               <div className="mb-0">
                 <label className="form-label" htmlFor="fDesc">Descripción</label>
-                <input type="text" className="form-control" id="fDesc"
-                  value={desc} onChange={(e) => setDesc(e.target.value)} />
+                <input type="text" className="form-control" id="fDesc" aria-invalid={!!errores.de('descripcion')}
+                  value={desc} onChange={(e) => { setDesc(e.target.value); errores.limpiar('descripcion'); }} />
+                <CampoError mensajes={errores.de('descripcion')} />
               </div>
             </form>
           </div>

@@ -1,6 +1,7 @@
 // Cliente HTTP del front hacia el BFF (/api/*). El BFF hace de proxy a la
 // API de Inventario. Centraliza el manejo de 401 (sesión caída) y 403 (sin
-// permiso), que el BFF distingue con "motivo" / "sinPermiso".
+// permiso), que el BFF distingue con "motivo" / "sinPermiso", y convierte
+// cualquier respuesta de error en un ApiError (ver lib/errores para mostrarlo).
 
 /** Prefijo del BFF. Todas las rutas son relativas (mismo origen). */
 export const API = '/api';
@@ -11,6 +12,94 @@ export type MotivoSesion = 'sin-sesion' | 'token-expirado';
 export interface SesionCaida {
   motivo: MotivoSesion;
   mensaje: string;
+}
+
+/** Aviso por omisión cuando la API responde 403. */
+export const MSG_SIN_PERMISO = 'No tienes permiso para realizar esta acción.';
+
+/**
+ * Error de una petición a la API: la respuesta no fue 2xx, o no hubo respuesta.
+ * getJSON, sendJSON y sendForm lo lanzan en lugar de devolver el cuerpo del
+ * error como si fueran datos.
+ */
+export class ApiError extends Error {
+  /** Status HTTP. 0 = la petición no llegó (sin red o el BFF no responde). */
+  readonly status: number;
+  /** Errores de validación por campo, con la clave en camelCase ("idEmpresa"). */
+  readonly errores: Record<string, string[]>;
+  /** No hubo conexión con la API (red caída, BFF o API sin responder). */
+  readonly sinConexion: boolean;
+  /** Folio que la API asigna al error; sirve para buscarlo en sus logs. */
+  readonly traceId?: string;
+  /** Cuerpo de la respuesta tal como llegó (ya parseado si era JSON). */
+  readonly data: unknown;
+
+  constructor(status: number, data: unknown, mensaje?: string) {
+    const o = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
+    super(mensaje ?? detalleDe(o, data) ?? `HTTP ${status}`);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+    this.errores = erroresDe(o.errors);
+    this.traceId = typeof o.traceId === 'string' ? o.traceId : undefined;
+    this.sinConexion = status === 0 || o.sinConexion === true || [502, 503, 504].includes(status);
+  }
+}
+
+/** Mensaje que manda la API o el BFF, en el orden en que suelen venir. */
+function detalleDe(o: Record<string, unknown>, data: unknown): string | undefined {
+  for (const k of ['error', 'mensaje', 'message', 'title']) {
+    if (typeof o[k] === 'string' && o[k]) return o[k] as string;
+  }
+  return typeof data === 'string' && data.trim() ? data.trim() : undefined;
+}
+
+/**
+ * Normaliza el "errors" de ASP.NET ({ "Descripcion": [...], "$.idEmpresa": [...] })
+ * a claves camelCase sin prefijos, que son los nombres que usa el formulario.
+ */
+function erroresDe(raw: unknown): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    const msgs = (Array.isArray(v) ? v : [v]).filter((m): m is string => typeof m === 'string' && !!m);
+    if (!msgs.length) continue;
+    const ultimo = k.replace(/^\$\.?/, '').replace(/\[\d+\]/g, '').split('.').pop() ?? '';
+    const campo = ultimo ? ultimo[0].toLowerCase() + ultimo.slice(1) : '';
+    out[campo] = [...(out[campo] ?? []), ...msgs.map(traducir)];
+  }
+  // Si un campo no se pudo convertir, ASP.NET además marca el cuerpo completo
+  // ("command" es el parámetro de los controladores) como obligatorio. Con el
+  // error del campo basta; solo se conserva si es el único.
+  if (out.command && Object.keys(out).length > 1) delete out.command;
+  return out;
+}
+
+/** Traduce los mensajes por omisión de ASP.NET que llegan en inglés. */
+function traducir(m: string): string {
+  if (/^The .+ field is required\.?$/i.test(m)) return 'Este campo es obligatorio.';
+  if (/^The JSON value could not be converted/i.test(m)) return 'El valor no tiene el formato correcto.';
+  const max = /maximum length of '?(\d+)'?/i.exec(m);
+  if (max) return `Máximo ${max[1]} caracteres.`;
+  return m;
+}
+
+/** Lee el cuerpo como JSON; si no lo es, como texto. Vacío => undefined. */
+async function leerCuerpo(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+/** Devuelve el cuerpo si la respuesta es 2xx; si no, lanza ApiError. */
+async function cuerpoOError<T>(res: Response): Promise<T> {
+  const data = await leerCuerpo(res);
+  if (!res.ok) throw new ApiError(res.status, data);
+  return data as T;
 }
 
 let unauthorizedHandler: ((info: SesionCaida) => void) | null = null;
@@ -43,7 +132,13 @@ async function cuerpoError(res: Response): Promise<Record<string, unknown>> {
 }
 
 async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
-  const res = await fetch(url, { credentials: 'same-origin', ...init });
+  let res: Response;
+  try {
+    res = await fetch(url, { credentials: 'same-origin', ...init });
+  } catch {
+    // fetch solo lanza si la petición no salió: sin red o el BFF caído.
+    throw new ApiError(0, undefined, 'Sin conexión con el servidor.');
+  }
   if (url.includes('/auth')) return res; // el login maneja sus propios códigos
 
   if (res.status === 401) {
@@ -70,17 +165,17 @@ async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
     forbiddenHandler(
       typeof data.error === 'string' && data.error
         ? data.error
-        : 'No tienes permiso para realizar esta acción.',
+        : MSG_SIN_PERMISO,
     );
   }
   return res;
 }
 
 export async function getJSON<T = unknown>(url: string): Promise<T> {
-  const r = await apiFetch(url);
-  return r.json() as Promise<T>;
+  return cuerpoOError<T>(await apiFetch(url));
 }
 
+/** Envía JSON. Devuelve el cuerpo de la respuesta (undefined si vino vacío). */
 export async function sendJSON<T = unknown>(
   method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
   url: string,
@@ -91,10 +186,13 @@ export async function sendJSON<T = unknown>(
     headers: { 'Content-Type': 'application/json' },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  return r.json() as Promise<T>;
+  return cuerpoOError<T>(r);
 }
 
-/** Igual que sendJSON pero devuelve { ok, status, data } para inspeccionar el status. */
+/**
+ * Como sendJSON pero NO lanza con un status de error: devuelve { ok, status, data }.
+ * Solo para el login, que interpreta sus propios códigos. Las pantallas usan sendJSON.
+ */
 export async function sendJSONStatus<T = unknown>(
   method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
   url: string,
@@ -105,24 +203,13 @@ export async function sendJSONStatus<T = unknown>(
     headers: { 'Content-Type': 'application/json' },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  const data = (await r.json().catch(() => ({}))) as T;
+  const data = ((await leerCuerpo(r)) ?? {}) as T;
   return { ok: r.ok, status: r.status, data };
 }
 
-/** Envía un FormData (multipart) — para los importadores. Devuelve { ok, status, data }. */
-export async function sendForm<T = unknown>(
-  url: string,
-  form: FormData,
-): Promise<{ ok: boolean; status: number; data: T }> {
-  const r = await apiFetch(url, { method: 'POST', body: form });
-  const text = await r.text();
-  let data: T;
-  try {
-    data = (text ? JSON.parse(text) : {}) as T;
-  } catch {
-    data = text as unknown as T;
-  }
-  return { ok: r.ok, status: r.status, data };
+/** Envía un FormData (multipart) — para los importadores. Lanza ApiError si no es 2xx. */
+export async function sendForm<T = unknown>(url: string, form: FormData): Promise<T> {
+  return cuerpoOError<T>(await apiFetch(url, { method: 'POST', body: form }));
 }
 
 // ---- Atajos de autenticación ----
@@ -131,6 +218,8 @@ export interface Usuario {
   Email?: string;
   Nombre?: string;
   NombreUsuario?: string;
+  /** Rol que el BFF leyó del token de la API: reader, writer o admin. */
+  Rol?: string;
   [k: string]: unknown;
 }
 

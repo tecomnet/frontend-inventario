@@ -1,0 +1,48 @@
+# Verifica cada pull request y cada push a main/develop (mismo esquema que
+# frontendRecargas): tipos, pruebas y build. Hasta ahora nada corría las
+# pruebas de forma automática.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  workflow_dispatch: {}
+
+# Un push nuevo sobre la misma rama cancela la corrida anterior: no tiene caso
+# esperar el resultado de un commit que ya quedó atrás.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Tipos, pruebas y build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22: Vitest 5 y jsdom 30 piden 22 o superior.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # npm ci sí funciona aquí: el lockfile marca bien como opcionales los
+      # binarios de esbuild de otras plataformas (el problema que obligó a
+      # Recargas a usar npm install).
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      # tsc -b revisa el front (tsconfig.app) y el BFF (tsconfig.node), pruebas incluidas.
+      - name: Tipos
+        run: npx tsc -b
+
+      - name: Pruebas
+        run: npx vitest run
+
+      # El build va al final y con su propio paso: un error que solo aparece al
+      # compilar (una importación rota, por ejemplo) no debe llegar a Amplify.
+      - name: Build de producción
+        run: npx vite build && npm run build:lambda

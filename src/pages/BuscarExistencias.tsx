@@ -4,6 +4,7 @@ import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
 import { API, getJSON } from '../lib/api';
+import { describirError } from '../lib/errores';
 
 export default function BuscarExistencias() {
   const [empresaId, setEmpresaId] = useState('');
@@ -12,6 +13,7 @@ export default function BuscarExistencias() {
   const [productoId, setProductoId] = useState('');
   const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error'>('idle');
   const [payload, setPayload] = useState<unknown>(null);
+  const [errMsg, setErrMsg] = useState('');
 
   const consultar = async (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -24,7 +26,8 @@ export default function BuscarExistencias() {
       const res = await getJSON(url);
       setPayload(res);
       setEstado('ok');
-    } catch {
+    } catch (err) {
+      setErrMsg(describirError(err).mensaje);
       setEstado('error');
     }
   };
@@ -67,7 +70,7 @@ export default function BuscarExistencias() {
         )}
         {estado === 'cargando' && <div className="loading-state">Consultando existencias…</div>}
         {estado === 'error' && (
-          <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando existencias</h2><p>Revisa los parámetros o que el API esté disponible.</p></div>
+          <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando existencias</h2><p>{errMsg}</p></div>
         )}
         {estado === 'ok' && (
           <DynamicTable payload={payload} emptyTitle="Sin resultados" emptyMessage="No se encontraron existencias para esos parámetros." />

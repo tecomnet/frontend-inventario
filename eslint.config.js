@@ -7,7 +7,7 @@ import prettier from 'eslint-config-prettier/flat';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
-  globalIgnores(['dist', 'lambda']),
+  globalIgnores(['dist', 'lambda', 'src/lib/api-schema.d.ts']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
