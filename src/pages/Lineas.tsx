@@ -6,6 +6,7 @@ import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
 import { API, sendJSONStatus } from '../lib/api';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
+import { usePermisos } from '../hooks/usePermisos';
 import { siNo } from '../lib/format';
 
 interface Linea {
@@ -21,6 +22,7 @@ export default function Lineas() {
   const { notify } = useUI();
   const listado = useListadoPaginado<Linea>(`${API}/Catalogos/lineas`);
   const { items, estado } = listado;
+  const { puedeEscribir } = usePermisos();
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Linea>(vacio);
   const [guardando, setGuardando] = useState(false);
@@ -43,7 +45,7 @@ export default function Lineas() {
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Catalogos/lineas`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/lineas/${form.id}` : `${API}/Catalogos/lineas`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
@@ -69,7 +71,7 @@ export default function Lineas() {
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">Líneas</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva línea</button>
+            {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva línea</button>}
           </div>
 
           <div className="table-card p-3">
@@ -78,7 +80,7 @@ export default function Lineas() {
                 <thead>
                   <tr>
                     <th>Id</th><th>Descripción</th><th>Línea Padre</th><th>Activa</th>
-                    <th className="text-end">Acciones</th>
+                    {puedeEscribir && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -88,9 +90,9 @@ export default function Lineas() {
                   {estado === 'ok' && items.map((l) => (
                     <tr key={l.id}>
                       <td>{l.id}</td><td>{l.descripcion}</td><td>{l.idLineaPadre ?? '-'}</td><td>{siNo(l.esActiva)}</td>
-                      <td className="text-end">
+                      {puedeEscribir && <td className="text-end">
                         <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(l)}><i className="bi bi-pencil" /></button>
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>

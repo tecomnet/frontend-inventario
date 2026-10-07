@@ -6,13 +6,14 @@ import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
 import { API, sendJSONStatus } from '../lib/api';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
+import { usePermisos } from '../hooks/usePermisos';
 import { siNo } from '../lib/format';
 
 interface Proveedor {
   id: number;
   descripcion?: string;
-  contacto?: string;
-  diasCredito?: number;
+  contacto?: string | null;
+  diasCredito?: number | null;
   esActivo?: boolean;
 }
 
@@ -22,6 +23,7 @@ export default function Proveedores() {
   const { notify } = useUI();
   const listado = useListadoPaginado<Proveedor>(`${API}/Catalogos/proveedores`);
   const { items, estado } = listado;
+  const { puedeEscribir } = usePermisos();
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Proveedor>(vacio);
   const [guardando, setGuardando] = useState(false);
@@ -37,15 +39,17 @@ export default function Proveedores() {
     const isEdit = (form.id ?? 0) > 0;
     const base = {
       descripcion: (form.descripcion ?? '').trim(),
-      contacto: (form.contacto ?? '').trim(),
-      diasCredito: form.diasCredito ?? 0,
+      // Opcionales en la API: vacío viaja como null para no convertir un null
+      // guardado en '' o 0 al editar (el PUT reemplaza el registro completo).
+      contacto: (form.contacto ?? '').trim() || null,
+      diasCredito: form.diasCredito ?? null,
       esActivo: form.esActivo ?? true,
     };
     const payload = isEdit ? { id: form.id ?? 0, ...base } : base;
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Catalogos/proveedores`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/proveedores/${form.id}` : `${API}/Catalogos/proveedores`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
@@ -71,7 +75,7 @@ export default function Proveedores() {
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">Proveedores</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nuevo proveedor</button>
+            {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nuevo proveedor</button>}
           </div>
 
           <div className="table-card p-3">
@@ -80,7 +84,7 @@ export default function Proveedores() {
                 <thead>
                   <tr>
                     <th>Id</th><th>Descripción</th><th>Contacto</th><th>Días Crédito</th><th>Activo</th>
-                    <th className="text-end">Acciones</th>
+                    {puedeEscribir && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -91,9 +95,9 @@ export default function Proveedores() {
                     <tr key={p.id}>
                       <td>{p.id}</td><td>{p.descripcion}</td><td>{p.contacto ?? '-'}</td>
                       <td>{p.diasCredito ?? 0}</td><td>{siNo(p.esActivo)}</td>
-                      <td className="text-end">
+                      {puedeEscribir && <td className="text-end">
                         <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(p)}><i className="bi bi-pencil" /></button>
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>
@@ -119,7 +123,7 @@ export default function Proveedores() {
                 <div className="form-group"><label>Contacto</label>
                   <input type="text" value={form.contacto ?? ''} onChange={(e) => set('contacto', e.target.value)} /></div>
                 <div className="form-group"><label>Días Crédito</label>
-                  <input type="number" min={0} step={1} value={form.diasCredito ?? 0} onChange={(e) => set('diasCredito', num(e.target.value))} required /></div>
+                  <input type="number" min={0} step={1} value={form.diasCredito ?? ''} onChange={(e) => set('diasCredito', e.target.value === '' ? null : num(e.target.value))} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActivo ?? true} onChange={(e) => set('esActivo', e.target.checked)} /> Activo</label>
               </div>
             </form>
