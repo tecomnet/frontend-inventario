@@ -2,11 +2,14 @@
 // Equivale a renderImportador / enviarImportador del panel viejo.
 import { useRef, useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import SinPermiso from '../components/SinPermiso';
 import { useUI } from '../context/UIContext';
-import { API, sendForm } from '../lib/api';
+import { usePermisos } from '../hooks/usePermisos';
+import { API, avisoSinPermiso, sendForm } from '../lib/api';
 
 export default function Importador() {
   const { notify } = useUI();
+  const { puedeEscribir } = usePermisos();
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -34,10 +37,12 @@ export default function Importador() {
     form.append('dtFechaCompra', fecha);
     setEnviando(true);
     try {
-      const { ok, data } = await sendForm<{ exito?: boolean; total?: number; errores?: unknown }>(
+      const { ok, status, data } = await sendForm<{ exito?: boolean; total?: number; errores?: unknown }>(
         `${API}/importador/importador`,
         form,
       );
+      const aviso = avisoSinPermiso(status, data);
+      if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok || !data?.exito) {
         const errs = (data?.errores ?? ['Error del servidor']) as unknown;
         const lista = Array.isArray(errs) ? errs : [errs];
@@ -60,6 +65,7 @@ export default function Importador() {
         <p className="page-subtitle">Carga tu archivo y configura los datos del lote.</p>
       </div>
 
+      {!puedeEscribir ? <SinPermiso /> : (
       <div className="form-card">
         <div
           className={`drop-zone${dragging ? ' active' : ''}`}
@@ -88,6 +94,7 @@ export default function Importador() {
           <i className="bi bi-upload" /> {enviando ? 'Importando…' : 'Importar archivo'}
         </button>
       </div>
+      )}
     </AppLayout>
   );
 }

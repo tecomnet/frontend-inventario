@@ -4,8 +4,9 @@ import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
-import { API, sendJSONStatus } from '../lib/api';
+import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
+import { usePermisos } from '../hooks/usePermisos';
 import { fecha, isoToInput } from '../lib/format';
 
 // Mismos valores que EnumSimDet de la API (Idle=1, Activado=2, Reactivado=3,
@@ -53,6 +54,7 @@ export default function Sims() {
   const listado = useListadoPaginado<Sim>(`${API}/Catalogos/simdet`, { ...filtros });
   const { items, estado } = listado;
 
+  const { puedeEscribir } = usePermisos();
   const [edit, setEdit] = useState<Sim | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -84,7 +86,9 @@ export default function Sims() {
     };
     setGuardando(true);
     try {
-      const { ok, status } = await sendJSONStatus('PUT', `${API}/Catalogos/simdet/${edit.id}`, payload);
+      const { ok, status, data } = await sendJSONStatus('PUT', `${API}/Catalogos/simdet/${edit.id}`, payload);
+      const aviso = avisoSinPermiso(status, data);
+      if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify('SIM actualizada.', 'success');
       setEdit(null);
@@ -128,7 +132,7 @@ export default function Sims() {
         <button className="btn btn-secondary" onClick={limpiar}><i className="bi bi-funnel" /> Limpiar filtros</button>
       </div>
 
-      {edit && (
+      {edit && puedeEscribir && (
         <div className="form-card">
           <div className="entity-form-header">
             <div><span className="eyebrow">Editar</span><h3>SIM {edit.id} · {edit.iccid ?? ''}</h3></div>
@@ -164,7 +168,7 @@ export default function Sims() {
         <table>
           <thead>
             <tr>
-              <th>Editar</th><th>Id</th><th>Imsi</th><th>Iccid</th><th>Msisdn</th><th>Producto</th>
+              {puedeEscribir && <th>Editar</th>}<th>Id</th><th>Imsi</th><th>Iccid</th><th>Msisdn</th><th>Producto</th>
               <th>Desc. Producto</th><th>Lote Tecomnet</th><th>Lote Altan</th><th>F. Registro</th><th>Estado Sim</th>
               <th>F. Compra</th><th>F. Recepción</th><th>F. Entrega</th><th>F. Activación</th><th>F. Suspensión</th>
               <th>F. Reactivación</th><th>F. Inicio Facturación</th><th>F. Baja</th>
@@ -176,7 +180,7 @@ export default function Sims() {
             {estado === 'ok' && items.length === 0 && <tr><td colSpan={19} className="text-center text-muted py-4">Sin registros.</td></tr>}
             {estado === 'ok' && items.map((p) => (
               <tr key={p.id}>
-                <td><button className="action-btn edit" title="Editar" onClick={() => setEdit(p)}><i className="bi bi-pencil" /></button></td>
+                {puedeEscribir && <td><button className="action-btn edit" title="Editar" onClick={() => setEdit(p)}><i className="bi bi-pencil" /></button></td>}
                 <td>{p.id}</td><td>{p.imsi}</td><td>{p.iccid}</td><td>{p.msisdn}</td><td>{p.idProducto}</td>
                 <td>{p.productoDescripcion}</td><td>{p.loteTecomnet}</td><td>{p.loteALtan}</td><td>{fecha(p.fechaRegistro)}</td>
                 <td>{ESTADOS_SIM[estadoNum(p.estadoSim)] ?? p.estadoSim}</td>

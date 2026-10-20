@@ -4,8 +4,9 @@ import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
-import { API, sendJSONStatus } from '../lib/api';
+import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
+import { usePermisos } from '../hooks/usePermisos';
 import { siNo } from '../lib/format';
 
 // La API lista con id/empresaId y el PUT recibe idUdn/idEmpresa; el
@@ -27,6 +28,7 @@ export default function UnidadesNegocio() {
   const { notify } = useUI();
   const listado = useListadoPaginado<Udn>(`${API}/Catalogos/unidadesnegocio`);
   const { items, estado } = listado;
+  const { puedeEscribir } = usePermisos();
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<Udn>(vacio);
   const [guardando, setGuardando] = useState(false);
@@ -73,7 +75,9 @@ export default function UnidadesNegocio() {
   const baja = async (idUdn: number) => {
     if (!window.confirm(`¿Dar de baja la UDN ${idUdn}?`)) return;
     try {
-      const { ok, status } = await sendJSONStatus('DELETE', `${API}/Catalogos/unidadesnegocio/${idUdn}`);
+      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Catalogos/unidadesnegocio/${idUdn}`);
+      const aviso = avisoSinPermiso(status, data);
+      if (aviso) { notify(aviso, 'warning'); return; }
       if (!ok) throw new Error('HTTP ' + status);
       notify('UDN dada de baja.', 'success');
       await listado.recargar();
@@ -91,7 +95,7 @@ export default function UnidadesNegocio() {
               <span className="eyebrow">Catálogo</span>
               <h1 className="page-title mb-0">Unidades de Negocio</h1>
             </div>
-            <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva UDN</button>
+            {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva UDN</button>}
           </div>
 
           <div className="table-card p-3">
@@ -99,7 +103,7 @@ export default function UnidadesNegocio() {
               <table className="table table-cat align-middle">
                 <thead>
                   <tr>
-                    <th>Id</th><th>Descripción</th><th>Empresa Id</th><th>Activa</th><th className="text-end">Acciones</th>
+                    <th>Id</th><th>Descripción</th><th>Empresa Id</th><th>Activa</th>{puedeEscribir && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -111,10 +115,10 @@ export default function UnidadesNegocio() {
                     return (
                       <tr key={id}>
                         <td>{id}</td><td>{u.descripcion}</td><td>{empresaDe(u)}</td><td>{siNo(u.esActiva)}</td>
-                        <td className="text-end">
+                        {puedeEscribir && <td className="text-end">
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(u)}><i className="bi bi-pencil" /></button>
                           <button className="action-btn disable" title="Dar de baja" onClick={() => baja(id)}><i className="bi bi-slash-circle" /></button>
-                        </td>
+                        </td>}
                       </tr>
                     );
                   })}

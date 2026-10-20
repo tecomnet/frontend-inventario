@@ -13,6 +13,20 @@ export interface SesionCaida {
   mensaje: string;
 }
 
+/** Aviso por omisión cuando la API responde 403. */
+export const MSG_SIN_PERMISO = 'No tienes permiso para realizar esta acción.';
+
+/**
+ * Si una escritura respondió 403, devuelve el aviso de permiso que manda el BFF
+ * (en "title"); si fue otro status, null. Las pantallas lo usan para no reportar
+ * un 403 como "HTTP 403" o como un error de la API.
+ */
+export function avisoSinPermiso(status: number, data: unknown): string | null {
+  if (status !== 403) return null;
+  const t = (data as { title?: unknown } | null)?.title;
+  return typeof t === 'string' && t ? t : MSG_SIN_PERMISO;
+}
+
 let unauthorizedHandler: ((info: SesionCaida) => void) | null = null;
 let forbiddenHandler: ((mensaje: string) => void) | null = null;
 // Se avisa de la sesión caída UNA sola vez: una pantalla puede lanzar varias
@@ -70,7 +84,7 @@ async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
     forbiddenHandler(
       typeof data.error === 'string' && data.error
         ? data.error
-        : 'No tienes permiso para realizar esta acción.',
+        : MSG_SIN_PERMISO,
     );
   }
   return res;
@@ -131,6 +145,8 @@ export interface Usuario {
   Email?: string;
   Nombre?: string;
   NombreUsuario?: string;
+  /** Rol que el BFF leyó del token de la API: reader, writer o admin. */
+  Rol?: string;
   [k: string]: unknown;
 }
 
