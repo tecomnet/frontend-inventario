@@ -75,6 +75,7 @@ Inventario/
 ├── .github/
 │   ├── pull_request_template.md
 │   └── workflows/
+│       ├── ci.yml              # CI: tipos, pruebas y build en cada PR y push a main/develop
 │       ├── deploy-lambda.yml   # CI: actualiza el Lambda en cada push a server/
 │       └── jira-convention.yml # CI: valida KL-### en el título y los commits del PR
 ├── public/img/                # Logos (Mundo2.png, LetrasTecomnet.png, logo1.png…)
@@ -91,6 +92,7 @@ Inventario/
 │   ├── index.ts               # Arranque local (dev)
 │   └── lambda.ts              # Handler para AWS Lambda
 ├── src/
+│   ├── test/                  # Pruebas del front (Vitest + Testing Library, jsdom) y setup.ts
 │   ├── main.tsx               # Entry: providers + router + estilos
 │   ├── App.tsx                # Definición de rutas
 │   ├── components/
@@ -256,6 +258,9 @@ Abre http://localhost:5175. El proxy de Vite reenvía `/api/*` al BFF local.
 | `npm run lint` | ESLint. |
 | `npm run format -- <archivos>` | Formatea con Prettier los archivos indicados. |
 | `npm run format:check -- <archivos>` | Revisa el formato sin modificar. |
+| `npm test` | Corre todas las pruebas una vez (BFF en Node, front en jsdom). Es lo que corre el CI. |
+| `npm run test:watch` | Pruebas en modo watch. |
+| `npm run test:ui` | Pruebas con la interfaz web de Vitest. |
 | `npm run gen:api` | Regenera `src/lib/api-schema.d.ts` desde `api/swagger.json`. |
 | `npm run gen:api:fetch` | Baja el `swagger.json` de la API local a `api/` y regenera los tipos. |
 | `npm run preview` | Sirve el `dist/` compilado localmente. |
