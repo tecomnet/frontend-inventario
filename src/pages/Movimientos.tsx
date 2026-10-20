@@ -4,6 +4,7 @@ import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
 import { API, getJSON } from '../lib/api';
+import { describirError } from '../lib/errores';
 
 export default function Movimientos() {
   const [empresaId, setEmpresaId] = useState('');
@@ -12,6 +13,7 @@ export default function Movimientos() {
   const [hasta, setHasta] = useState('');
   const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error'>('idle');
   const [payload, setPayload] = useState<unknown>(null);
+  const [errMsg, setErrMsg] = useState('');
 
   const consultar = async (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -23,7 +25,8 @@ export default function Movimientos() {
       const res = await getJSON(`${API}/MovimientosDeAlmacen?${params.toString()}`);
       setPayload(res);
       setEstado('ok');
-    } catch {
+    } catch (err) {
+      setErrMsg(describirError(err).mensaje);
       setEstado('error');
     }
   };
@@ -64,7 +67,7 @@ export default function Movimientos() {
         )}
         {estado === 'cargando' && <div className="loading-state">Consultando movimientos…</div>}
         {estado === 'error' && (
-          <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando movimientos</h2><p>Revisa los parámetros o el API.</p></div>
+          <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando movimientos</h2><p>{errMsg}</p></div>
         )}
         {estado === 'ok' && (
           <DynamicTable payload={payload} emptyTitle="Sin resultados" emptyMessage="No se encontraron movimientos." />

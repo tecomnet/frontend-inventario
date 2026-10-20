@@ -2,61 +2,57 @@
 // Equivale a getProductos / renderProductoForm / bajaProducto del panel viejo.
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import CampoError from '../components/CampoError';
 import Paginacion from '../components/Paginacion';
 import { useUI } from '../context/UIContext';
-import { API, avisoSinPermiso, sendJSONStatus } from '../lib/api';
-import { useListadoPaginado } from '../lib/useListadoPaginado';
+import { useErroresForm } from '../hooks/useErroresForm';
 import { usePermisos } from '../hooks/usePermisos';
+import { API, sendJSON } from '../lib/api';
+import type { CreateProducto, Producto, UpdateProducto } from '../lib/api-types';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
-interface Producto {
-  id: number;
-  codInterno?: string;
-  descripcion?: string;
-  materialDescripcion?: string;
-  presentacionDescripcion?: string;
-  lineaDescripcion?: string;
-  marcaId?: number;
-  lineaId?: number;
-  presentacionId?: number;
-  presentacioniD?: number;
-  unidadMedidaId?: number;
-  materialId?: number;
-  iva?: number;
-  ieps?: number;
-  esActivo?: boolean;
-}
-
-const vacio: Producto = {
+/** Formulario = cuerpo del PUT; id 0 es alta. */
+const vacio: UpdateProducto = {
   id: 0, codInterno: '', descripcion: '', marcaId: 0, lineaId: 0,
   presentacionId: 0, unidadMedidaId: 0, materialId: 0, iva: 0, ieps: 0, esActivo: true,
 };
+const CAMPOS = [
+  'codInterno', 'descripcion', 'marcaId', 'lineaId', 'presentacionId',
+  'unidadMedidaId', 'materialId', 'iva', 'ieps',
+] as const;
 
 export default function Productos() {
-  const { notify } = useUI();
-  const listado = useListadoPaginado<Producto>(`${API}/Productos`);
-  const { items, estado } = listado;
+  const { notify, notifyError } = useUI();
   const { puedeEscribir } = usePermisos();
+  const listado = useListadoPaginado<Producto>(`${API}/Productos`);
+  const { items, estado, errMsg } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
-  const [form, setForm] = useState<Producto>(vacio);
+  const [form, setForm] = useState<UpdateProducto>(vacio);
   const [guardando, setGuardando] = useState(false);
+  const errores = useErroresForm(CAMPOS);
 
-  const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
-  const abrirEdicion = (p: Producto) => {
-    setForm({ ...p, presentacionId: p.presentacionId ?? p.presentacioniD ?? 0 });
-    setVista('form'); window.scrollTo(0, 0);
+  const abrirForm = (f: UpdateProducto) => { setForm(f); errores.limpiar(); setVista('form'); window.scrollTo(0, 0); };
+  const abrirAlta = () => abrirForm(vacio);
+  const abrirEdicion = (p: Producto) => abrirForm({
+    id: p.id, codInterno: p.codInterno, descripcion: p.descripcion,
+    marcaId: p.marcaId, lineaId: p.lineaId, presentacionId: p.presentacioniD,
+    unidadMedidaId: p.unidadMedidaId, materialId: p.materialId,
+    iva: p.iva, ieps: p.ieps, esActivo: p.esActivo,
+  });
+
+  const set = <K extends keyof UpdateProducto>(k: K, v: UpdateProducto[K]) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    errores.limpiar(k);
   };
-
-  const set = <K extends keyof Producto>(k: K, v: Producto[K]) => setForm((f) => ({ ...f, [k]: v }));
   const num = (v: string) => Number(v) || 0;
 
   const guardar = async (ev: React.FormEvent) => {
     ev.preventDefault();
-    const isEdit = (form.id ?? 0) > 0;
-    const payload = {
-      id: form.id ?? 0,
-      codInterno: (form.codInterno ?? '').trim(),
-      descripcion: (form.descripcion ?? '').trim(),
+    const isEdit = form.id > 0;
+    const base = {
+      codInterno: form.codInterno.trim(),
+      descripcion: form.descripcion.trim(),
       // Opcionales en la API: el listado trae 0 cuando no hay valor, y 0 no
       // es un id válido; viaja como null para no romper la llave al editar.
       marcaId: form.marcaId || null,
@@ -67,22 +63,16 @@ export default function Productos() {
       iva: form.iva ?? 0,
       ieps: form.ieps ?? 0,
       esActivo: form.esActivo ?? true,
-    };
+    } satisfies CreateProducto;
     setGuardando(true);
     try {
-      const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Productos/${payload.id}` : `${API}/Productos`, payload,
-      );
-      if (!ok) {
-        const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
-        notify('No se pudo guardar:\n' + lines.map((l) => `• ${l}`).join('\n'), 'danger');
-        return;
-      }
+      if (isEdit) await sendJSON('PUT', `${API}/Productos/${form.id}`, { id: form.id, ...base } satisfies UpdateProducto);
+      else await sendJSON('POST', `${API}/Productos`, base);
       notify(isEdit ? 'Producto actualizado.' : 'Producto creado.', 'success');
       await listado.recargar();
       setVista('lista');
     } catch (err) {
-      notify('Error de red: ' + (err instanceof Error ? err.message : ''), 'danger');
+      errores.capturar(err, 'No se pudo guardar el producto');
     } finally {
       setGuardando(false);
     }
@@ -91,14 +81,11 @@ export default function Productos() {
   const baja = async (id: number) => {
     if (!window.confirm(`¿Dar de baja el producto ${id}?`)) return;
     try {
-      const { ok, status, data } = await sendJSONStatus('DELETE', `${API}/Productos/${id}`);
-      const aviso = avisoSinPermiso(status, data);
-      if (aviso) { notify(aviso, 'warning'); return; }
-      if (!ok) throw new Error('HTTP ' + status);
+      await sendJSON('DELETE', `${API}/Productos/${id}`);
       notify('Producto dado de baja.', 'success');
       await listado.recargar();
-    } catch {
-      notify('No se pudo dar de baja el producto. Revisa el API.', 'danger');
+    } catch (err) {
+      notifyError(err, 'No se pudo dar de baja el producto');
     }
   };
 
@@ -125,7 +112,7 @@ export default function Productos() {
                 </thead>
                 <tbody>
                   {estado === 'cargando' && <tr><td colSpan={10} className="text-center text-muted py-4">Cargando…</td></tr>}
-                  {estado === 'error' && <tr><td colSpan={10} className="text-center text-danger py-4">No se pudo cargar.</td></tr>}
+                  {estado === 'error' && <tr><td colSpan={10} className="text-center text-danger py-4">{errMsg || 'No se pudo cargar.'}</td></tr>}
                   {estado === 'ok' && items.length === 0 && <tr><td colSpan={10} className="text-center text-muted py-4">Sin registros.</td></tr>}
                   {estado === 'ok' && items.map((p) => (
                     <tr key={p.id}>
@@ -152,28 +139,37 @@ export default function Productos() {
         </>
       ) : (
         <>
-          <h1 className="page-title fw-bold mb-4">{(form.id ?? 0) > 0 ? `Editar producto ${form.id}` : 'Nuevo producto'}</h1>
+          <h1 className="page-title fw-bold mb-4">{form.id > 0 ? `Editar producto ${form.id}` : 'Nuevo producto'}</h1>
           <div className="form-card">
             <form onSubmit={guardar} noValidate>
               <div className="entity-grid">
                 <div className="form-group"><label>Código interno</label>
-                  <input type="text" value={form.codInterno ?? ''} onChange={(e) => set('codInterno', e.target.value)} required /></div>
+                  <input aria-invalid={!!errores.de('codInterno')} type="text" value={form.codInterno} onChange={(e) => set('codInterno', e.target.value)} required />
+                  <CampoError mensajes={errores.de('codInterno')} /></div>
                 <div className="form-group"><label>Descripción</label>
-                  <input type="text" value={form.descripcion ?? ''} onChange={(e) => set('descripcion', e.target.value)} required /></div>
+                  <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
+                  <CampoError mensajes={errores.de('descripcion')} /></div>
                 <div className="form-group"><label>Marca Id</label>
-                  <input type="number" min={0} step={1} value={form.marcaId ?? 0} onChange={(e) => set('marcaId', num(e.target.value))} required /></div>
+                  <input aria-invalid={!!errores.de('marcaId')} type="number" min={0} step={1} value={form.marcaId ?? 0} onChange={(e) => set('marcaId', num(e.target.value))} required />
+                  <CampoError mensajes={errores.de('marcaId')} /></div>
                 <div className="form-group"><label>Línea Id</label>
-                  <input type="number" min={0} step={1} value={form.lineaId ?? 0} onChange={(e) => set('lineaId', num(e.target.value))} required /></div>
+                  <input aria-invalid={!!errores.de('lineaId')} type="number" min={0} step={1} value={form.lineaId ?? 0} onChange={(e) => set('lineaId', num(e.target.value))} required />
+                  <CampoError mensajes={errores.de('lineaId')} /></div>
                 <div className="form-group"><label>Presentación Id</label>
-                  <input type="number" min={0} step={1} value={form.presentacionId ?? 0} onChange={(e) => set('presentacionId', num(e.target.value))} required /></div>
+                  <input aria-invalid={!!errores.de('presentacionId')} type="number" min={0} step={1} value={form.presentacionId ?? 0} onChange={(e) => set('presentacionId', num(e.target.value))} required />
+                  <CampoError mensajes={errores.de('presentacionId')} /></div>
                 <div className="form-group"><label>Unidad Medida Id</label>
-                  <input type="number" min={0} step={1} value={form.unidadMedidaId ?? 0} onChange={(e) => set('unidadMedidaId', num(e.target.value))} required /></div>
+                  <input aria-invalid={!!errores.de('unidadMedidaId')} type="number" min={0} step={1} value={form.unidadMedidaId ?? 0} onChange={(e) => set('unidadMedidaId', num(e.target.value))} required />
+                  <CampoError mensajes={errores.de('unidadMedidaId')} /></div>
                 <div className="form-group"><label>Material Id</label>
-                  <input type="number" min={0} step={1} value={form.materialId ?? 0} onChange={(e) => set('materialId', num(e.target.value))} required /></div>
+                  <input aria-invalid={!!errores.de('materialId')} type="number" min={0} step={1} value={form.materialId ?? 0} onChange={(e) => set('materialId', num(e.target.value))} required />
+                  <CampoError mensajes={errores.de('materialId')} /></div>
                 <div className="form-group"><label>IVA</label>
-                  <input type="number" min={0} step={0.01} value={form.iva ?? 0} onChange={(e) => set('iva', Number(e.target.value))} required /></div>
+                  <input aria-invalid={!!errores.de('iva')} type="number" min={0} step={0.01} value={form.iva ?? 0} onChange={(e) => set('iva', Number(e.target.value))} required />
+                  <CampoError mensajes={errores.de('iva')} /></div>
                 <div className="form-group"><label>IEPS</label>
-                  <input type="number" min={0} step={0.01} value={form.ieps ?? 0} onChange={(e) => set('ieps', Number(e.target.value))} required /></div>
+                  <input aria-invalid={!!errores.de('ieps')} type="number" min={0} step={0.01} value={form.ieps ?? 0} onChange={(e) => set('ieps', Number(e.target.value))} required />
+                  <CampoError mensajes={errores.de('ieps')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActivo ?? true} onChange={(e) => set('esActivo', e.target.checked)} /> Activo</label>
               </div>
             </form>

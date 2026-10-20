@@ -7,9 +7,8 @@ import {
 } from 'recharts';
 import AppLayout from '../components/AppLayout';
 import { API } from '../lib/api';
+import type { Producto } from '../lib/api-types';
 import { PAGE_SIZE_MAX, getPaged } from '../lib/paged';
-
-interface Producto { id: number; descripcion?: string; iva?: number | string; ieps?: number | string }
 
 const AZUL = '#1D4ED8';
 const DONA = ['#10b981', '#f59e0b', '#64748b'];

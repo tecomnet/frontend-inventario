@@ -2,16 +2,12 @@
 import AppLayout from '../components/AppLayout';
 import Paginacion from '../components/Paginacion';
 import { API } from '../lib/api';
+import type { Existencia } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
-
-interface Existencia {
-  empresaId?: number; udnId?: number; almacenId?: number;
-  productoId?: number; cantidad?: number; cantidadPiezas?: number;
-}
 
 export default function Existencias() {
   const listado = useListadoPaginado<Existencia>(`${API}/Existencias`);
-  const { items, estado } = listado;
+  const { items, estado, errMsg } = listado;
 
   return (
     <AppLayout active="existencias">
@@ -30,7 +26,7 @@ export default function Existencias() {
                 <tr><td colSpan={6} className="text-center text-muted py-4">Cargando…</td></tr>
               )}
               {estado === 'error' && (
-                <tr><td colSpan={6} className="text-center text-danger py-4">No se pudo cargar.</td></tr>
+                <tr><td colSpan={6} className="text-center text-danger py-4">{errMsg || 'No se pudo cargar.'}</td></tr>
               )}
               {estado === 'ok' && items.length === 0 && (
                 <tr><td colSpan={6} className="text-center text-muted py-4">Sin registros.</td></tr>

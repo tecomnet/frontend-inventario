@@ -6,10 +6,11 @@
 //  cada petición (incluidas las multipart de los importadores) con el
 //  Authorization: Bearer de la sesión, que la API exige desde KL-7.
 //
-//  Los tres casos de error de autorización se responden distintos:
+//  Los errores que el front necesita distinguir se responden distintos:
 //    401 sin-sesion      -> no hay sesión de panel (401 propio del BFF).
 //    401 token-expirado  -> la API rechazó el token: se cierra la sesión.
 //    403 sinPermiso      -> falta permiso: la sesión NO se toca.
+//    502 sinConexion     -> la API no respondió (red, DNS, timeout).
 // ============================================================
 import express, { type Request, type Response } from 'express';
 import cookieParser from 'cookie-parser';
@@ -220,8 +221,17 @@ export function createApp() {
       return res.status(403).json({ error: msg, title: msg, sinPermiso: true });
     }
 
+    // Sin respuesta de la API (red, DNS, timeout): 502 con "sinConexion" para
+    // que el front lo distinga de un error que sí devolvió la API.
+    if (code === 0) {
+      return res.status(502).json({
+        error: 'No hay conexión con la API de Inventario.',
+        sinConexion: true,
+      });
+    }
+
     res
-      .status(code || 502)
+      .status(code)
       .type(respType)
       .send(resp !== '' ? resp : JSON.stringify({ ok: code >= 200 && code < 400 }));
   });

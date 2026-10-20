@@ -4,6 +4,7 @@ import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
 import { API, getJSON } from '../lib/api';
+import { describirError } from '../lib/errores';
 
 type Mode = 'productoEmpresa' | 'empresa' | 'completo';
 
@@ -19,6 +20,7 @@ export default function Kardex() {
   const [idEmpresa, setIdEmpresa] = useState('');
   const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error' | 'pendiente'>('idle');
   const [payload, setPayload] = useState<unknown>(null);
+  const [errMsg, setErrMsg] = useState('');
 
   const cfg = MODES[mode];
 
@@ -32,7 +34,8 @@ export default function Kardex() {
       );
       setPayload(res);
       setEstado('ok');
-    } catch {
+    } catch (err) {
+      setErrMsg(describirError(err).mensaje);
       setEstado('error');
     }
   };
@@ -83,7 +86,7 @@ export default function Kardex() {
         )}
         {estado === 'cargando' && <div className="loading-state">Consultando Kardex…</div>}
         {estado === 'error' && (
-          <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando Kardex</h2><p>Revisa los parámetros o que el API esté disponible.</p></div>
+          <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando Kardex</h2><p>{errMsg}</p></div>
         )}
         {estado === 'ok' && (
           <DynamicTable payload={payload} emptyTitle="Sin resultados" emptyMessage="No se encontraron movimientos para esos parámetros." />
