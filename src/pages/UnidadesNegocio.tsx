@@ -8,13 +8,18 @@ import { API, sendJSONStatus } from '../lib/api';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
 
+// La API lista con id/empresaId y el PUT recibe idUdn/idEmpresa; el
+// formulario trabaja con los nombres del PUT y acepta los dos al leer.
 interface Udn {
   idUdn: number;
   id?: number;
   descripcion?: string;
   idEmpresa?: number;
+  empresaId?: number;
   esActiva?: boolean;
 }
+
+const empresaDe = (u: Udn) => u.idEmpresa ?? u.empresaId ?? 0;
 
 const vacio: Udn = { idUdn: 0, descripcion: '', idEmpresa: 0, esActiva: true };
 
@@ -28,7 +33,7 @@ export default function UnidadesNegocio() {
 
   const abrirAlta = () => { setForm(vacio); setVista('form'); window.scrollTo(0, 0); };
   const abrirEdicion = (u: Udn) => {
-    setForm({ ...u, idUdn: u.idUdn ?? u.id ?? 0 });
+    setForm({ ...u, idUdn: u.idUdn ?? u.id ?? 0, idEmpresa: empresaDe(u) });
     setVista('form'); window.scrollTo(0, 0);
   };
 
@@ -48,7 +53,7 @@ export default function UnidadesNegocio() {
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Catalogos/unidadesnegocio`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/unidadesnegocio/${idUdn}` : `${API}/Catalogos/unidadesnegocio`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
@@ -68,7 +73,7 @@ export default function UnidadesNegocio() {
   const baja = async (idUdn: number) => {
     if (!window.confirm(`¿Dar de baja la UDN ${idUdn}?`)) return;
     try {
-      const { ok, status } = await sendJSONStatus('DELETE', `${API}/Catalogos/unidadesnegocio`, { idUdn });
+      const { ok, status } = await sendJSONStatus('DELETE', `${API}/Catalogos/unidadesnegocio/${idUdn}`);
       if (!ok) throw new Error('HTTP ' + status);
       notify('UDN dada de baja.', 'success');
       await listado.recargar();
@@ -105,7 +110,7 @@ export default function UnidadesNegocio() {
                     const id = u.idUdn ?? u.id ?? 0;
                     return (
                       <tr key={id}>
-                        <td>{id}</td><td>{u.descripcion}</td><td>{u.idEmpresa}</td><td>{siNo(u.esActiva)}</td>
+                        <td>{id}</td><td>{u.descripcion}</td><td>{empresaDe(u)}</td><td>{siNo(u.esActiva)}</td>
                         <td className="text-end">
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(u)}><i className="bi bi-pencil" /></button>
                           <button className="action-btn disable" title="Dar de baja" onClick={() => baja(id)}><i className="bi bi-slash-circle" /></button>

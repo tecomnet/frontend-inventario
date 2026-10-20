@@ -8,16 +8,26 @@ import { API, sendJSONStatus } from '../lib/api';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { fecha, isoToInput } from '../lib/format';
 
+// Mismos valores que EnumSimDet de la API (Idle=1, Activado=2, Reactivado=3,
+// Suspendido=4, Baja=5).
 const ESTADOS_SIM: Record<number, string> = {
-  1: 'Registrada', 2: 'Activa', 3: 'Suspendida', 4: 'Reactivada', 5: 'Baja',
+  1: 'Registrada', 2: 'Activa', 3: 'Reactivada', 4: 'Suspendida', 5: 'Baja',
 };
+
+// El listado trae el estado por nombre; el PUT y el filtro lo piden por número.
+const ESTADO_POR_NOMBRE: Record<string, number> = {
+  Idle: 1, Activado: 2, Reactivado: 3, Suspendido: 4, Baja: 5,
+};
+
+const estadoNum = (v: unknown): number =>
+  typeof v === 'string' && v in ESTADO_POR_NOMBRE ? ESTADO_POR_NOMBRE[v] : Number(v);
 
 interface Sim {
   id: number;
   imsi?: string; iccid?: string; msisdn?: string;
   idProducto?: number; productoDescripcion?: string;
   loteTecomnet?: string; loteALtan?: string;
-  fechaRegistro?: string; estadoSim?: number;
+  fechaRegistro?: string; estadoSim?: number | string;
   fechaCompra?: string; fechaRecepcion?: string; fechaEntrega?: string;
   fechaActivacion?: string; fechaSuspencion?: string; fechaReactivacion?: string;
   fechaInicioFacturacion?: string; fechaBaja?: string;
@@ -54,10 +64,14 @@ export default function Sims() {
   const guardar = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!edit) return;
+    // El PUT reemplaza: las fechas que no se tocaron se reenvían tal como
+    // llegaron del listado, y las que se vaciaron viajan como null.
     const orNull = (v?: string) => (v ? v : null);
+    const estadoSim = estadoNum(edit.estadoSim);
+    if (!ESTADOS_SIM[estadoSim]) { notify('Selecciona un estado válido.', 'danger'); return; }
     const payload = {
       id: edit.id,
-      estadoSim: Number(edit.estadoSim),
+      estadoSim,
       fechaInstalacion: orNull(edit.fechaInstalacion),
       fechaActivacion: orNull(edit.fechaActivacion),
       fechaReactivacion: orNull(edit.fechaReactivacion),
@@ -70,7 +84,7 @@ export default function Sims() {
     };
     setGuardando(true);
     try {
-      const { ok, status } = await sendJSONStatus('PUT', `${API}/Catalogos/simdet`, payload);
+      const { ok, status } = await sendJSONStatus('PUT', `${API}/Catalogos/simdet/${edit.id}`, payload);
       if (!ok) throw new Error('HTTP ' + status);
       notify('SIM actualizada.', 'success');
       setEdit(null);
@@ -124,7 +138,7 @@ export default function Sims() {
             <div className="entity-grid">
               <div className="form-group">
                 <label>Estado Sim</label>
-                <select value={Number(edit.estadoSim) || ''} onChange={(e) => setEditDate('estadoSim', e.target.value)}>
+                <select value={estadoNum(edit.estadoSim) || ''} onChange={(e) => setEditDate('estadoSim', e.target.value)}>
                   {Object.entries(ESTADOS_SIM).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                 </select>
               </div>
@@ -165,7 +179,7 @@ export default function Sims() {
                 <td><button className="action-btn edit" title="Editar" onClick={() => setEdit(p)}><i className="bi bi-pencil" /></button></td>
                 <td>{p.id}</td><td>{p.imsi}</td><td>{p.iccid}</td><td>{p.msisdn}</td><td>{p.idProducto}</td>
                 <td>{p.productoDescripcion}</td><td>{p.loteTecomnet}</td><td>{p.loteALtan}</td><td>{fecha(p.fechaRegistro)}</td>
-                <td>{ESTADOS_SIM[Number(p.estadoSim)] ?? p.estadoSim}</td>
+                <td>{ESTADOS_SIM[estadoNum(p.estadoSim)] ?? p.estadoSim}</td>
                 <td>{fecha(p.fechaCompra)}</td><td>{fecha(p.fechaRecepcion)}</td><td>{fecha(p.fechaEntrega)}</td>
                 <td>{fecha(p.fechaActivacion)}</td><td>{fecha(p.fechaSuspencion)}</td><td>{fecha(p.fechaReactivacion)}</td>
                 <td>{fecha(p.fechaInicioFacturacion)}</td><td>{fecha(p.fechaBaja)}</td>

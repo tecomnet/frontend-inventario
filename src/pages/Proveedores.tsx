@@ -11,8 +11,8 @@ import { siNo } from '../lib/format';
 interface Proveedor {
   id: number;
   descripcion?: string;
-  contacto?: string;
-  diasCredito?: number;
+  contacto?: string | null;
+  diasCredito?: number | null;
   esActivo?: boolean;
 }
 
@@ -37,15 +37,17 @@ export default function Proveedores() {
     const isEdit = (form.id ?? 0) > 0;
     const base = {
       descripcion: (form.descripcion ?? '').trim(),
-      contacto: (form.contacto ?? '').trim(),
-      diasCredito: form.diasCredito ?? 0,
+      // Opcionales en la API: vacío viaja como null para no convertir un null
+      // guardado en '' o 0 al editar (el PUT reemplaza el registro completo).
+      contacto: (form.contacto ?? '').trim() || null,
+      diasCredito: form.diasCredito ?? null,
       esActivo: form.esActivo ?? true,
     };
     const payload = isEdit ? { id: form.id ?? 0, ...base } : base;
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Catalogos/proveedores`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/proveedores/${form.id}` : `${API}/Catalogos/proveedores`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
@@ -119,7 +121,7 @@ export default function Proveedores() {
                 <div className="form-group"><label>Contacto</label>
                   <input type="text" value={form.contacto ?? ''} onChange={(e) => set('contacto', e.target.value)} /></div>
                 <div className="form-group"><label>Días Crédito</label>
-                  <input type="number" min={0} step={1} value={form.diasCredito ?? 0} onChange={(e) => set('diasCredito', num(e.target.value))} required /></div>
+                  <input type="number" min={0} step={1} value={form.diasCredito ?? ''} onChange={(e) => set('diasCredito', e.target.value === '' ? null : num(e.target.value))} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActivo ?? true} onChange={(e) => set('esActivo', e.target.checked)} /> Activo</label>
               </div>
             </form>

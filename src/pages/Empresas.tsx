@@ -42,7 +42,7 @@ export default function Empresas() {
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Catalogos/empresas`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/empresas/${form.id}` : `${API}/Catalogos/empresas`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];

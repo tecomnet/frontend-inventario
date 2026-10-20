@@ -55,11 +55,13 @@ export default function Productos() {
       id: form.id ?? 0,
       codInterno: (form.codInterno ?? '').trim(),
       descripcion: (form.descripcion ?? '').trim(),
-      marcaId: form.marcaId ?? 0,
-      lineaId: form.lineaId ?? 0,
-      presentacionId: form.presentacionId ?? 0,
-      unidadMedidaId: form.unidadMedidaId ?? 0,
-      materialId: form.materialId ?? 0,
+      // Opcionales en la API: el listado trae 0 cuando no hay valor, y 0 no
+      // es un id válido; viaja como null para no romper la llave al editar.
+      marcaId: form.marcaId || null,
+      lineaId: form.lineaId || null,
+      presentacionId: form.presentacionId || null,
+      unidadMedidaId: form.unidadMedidaId || null,
+      materialId: form.materialId || null,
       iva: form.iva ?? 0,
       ieps: form.ieps ?? 0,
       esActivo: form.esActivo ?? true,
@@ -67,7 +69,7 @@ export default function Productos() {
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Productos`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Productos/${payload.id}` : `${API}/Productos`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
@@ -87,7 +89,7 @@ export default function Productos() {
   const baja = async (id: number) => {
     if (!window.confirm(`¿Dar de baja el producto ${id}?`)) return;
     try {
-      const { ok, status } = await sendJSONStatus('DELETE', `${API}/Productos`, { id });
+      const { ok, status } = await sendJSONStatus('DELETE', `${API}/Productos/${id}`);
       if (!ok) throw new Error('HTTP ' + status);
       notify('Producto dado de baja.', 'success');
       await listado.recargar();

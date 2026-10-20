@@ -43,7 +43,7 @@ export default function Lineas() {
     setGuardando(true);
     try {
       const { ok, status, data } = await sendJSONStatus<{ errors?: Record<string, string[]>; title?: string; message?: string }>(
-        isEdit ? 'PUT' : 'POST', `${API}/Catalogos/lineas`, payload,
+        isEdit ? 'PUT' : 'POST', isEdit ? `${API}/Catalogos/lineas/${form.id}` : `${API}/Catalogos/lineas`, payload,
       );
       if (!ok) {
         const lines = data?.errors ? Object.values(data.errors).flat() : [data?.title || data?.message || `HTTP ${status}`];
