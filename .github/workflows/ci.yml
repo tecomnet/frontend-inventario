@@ -35,6 +35,11 @@ jobs:
       - name: Instalar dependencias
         run: npm ci --no-audit --no-fund
 
+      # El lint va antes que todo: es lo mas barato de correr y lo que mas
+      # rapido se rompe. Sin este paso, un PR con lint en rojo pasaba el CI.
+      - name: Lint
+        run: npm run lint
+
       # tsc -b revisa el front (tsconfig.app) y el BFF (tsconfig.node), pruebas incluidas.
       - name: Tipos
         run: npx tsc -b
