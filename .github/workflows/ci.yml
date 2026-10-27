@@ -35,6 +35,9 @@ jobs:
       - name: Instalar dependencias
         run: npm ci --no-audit --no-fund
 
+      - name: Verificar errores
+        run: npm run lint
+
       # tsc -b revisa el front (tsconfig.app) y el BFF (tsconfig.node), pruebas incluidas.
       - name: Tipos
         run: npx tsc -b
