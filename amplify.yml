@@ -5,10 +5,16 @@ frontend:
   phases:
     preBuild:
       commands:
-        # npm install (no npm ci): tolera diferencias de dependencias opcionales
-        # por plataforma (p. ej. binarios nativos del bundler en Linux), que
-        # hacían fallar a npm ci en el entorno de Amplify.
-        - npm install
+        # Node 22: Vitest 5 y jsdom 30 lo exigen, igual que en ci.yml.
+        - nvm use 22
+        # npm ci (y ya no npm install): instala exactamente lo del lockfile, asi
+        # el build de Amplify es reproducible. El problema anterior con los
+        # binarios nativos ya no aplica: el lockfile los marca bien como
+        # opcionales por plataforma.
+        - npm ci --no-audit --no-fund
+        # Si el lint o una prueba falla, Amplify se detiene aqui y NO publica.
+        - npm run lint
+        - npm test
     build:
       commands:
         - npm run build

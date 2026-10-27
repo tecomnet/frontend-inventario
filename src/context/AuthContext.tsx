@@ -49,8 +49,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Verificación inicial de sesión.
-  useEffect(() => { void reload(); }, [reload]);
+  // Verificación inicial de sesión. No se llama a reload() aquí: la regla
+  // react-hooks/set-state-in-effect rastrea el setState hasta dentro del
+  // callback y marca error. Se consulta dentro del efecto y el resultado se
+  // aplica con "cancelado", que ademas evita actualizar el estado si el
+  // componente se desmonta antes de que responda el BFF.
+  useEffect(() => {
+    let cancelado = false;
+
+    void (async () => {
+      try {
+        const j = await Auth.check();
+        if (!cancelado) setUser(j.authenticated ? j.user : null);
+      } catch {
+        if (!cancelado) setUser(null);
+      } finally {
+        if (!cancelado) setReady(true);
+      }
+    })();
+
+    return () => { cancelado = true; };
+  }, []);
 
   // 401 en rutas autenticadas => al login, una sola vez (lib/api ya filtra los
   // 401 repetidos) y con el aviso que corresponda al motivo.

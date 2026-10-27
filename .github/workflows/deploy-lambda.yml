@@ -20,11 +20,26 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
+      # npm ci a secas: antes tenia "|| npm install", que convertia un lockfile
+      # roto en una instalacion distinta a la esperada y aun asi publicaba.
       - name: Install deps
-        run: npm ci || npm install
+        run: npm ci --no-audit --no-fund
+
+      # La verificacion vive AQUI y no en un "needs:" del CI: needs solo enlaza
+      # jobs del mismo workflow, y el job que verifica (ci.yml) es otro archivo.
+      # Con estos tres pasos, si algo falla el job se detiene y la Lambda no se
+      # actualiza, que es lo que pide el criterio de KL-65.
+      - name: Lint
+        run: npm run lint
+
+      - name: Tipos
+        run: npx tsc -b
+
+      - name: Pruebas
+        run: npx vitest run
 
       - name: Build Lambda bundle
         run: npm run build:lambda
