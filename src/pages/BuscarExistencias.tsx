@@ -5,12 +5,14 @@ import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
 import { API, getJSON } from '../lib/api';
 import { describirError } from '../lib/errores';
+import { SelectCatalogo } from '../components/SelectCatalogo';
 
 export default function BuscarExistencias() {
-  const [empresaId, setEmpresaId] = useState('');
-  const [almacenId, setAlmacenId] = useState('');
-  const [udnId, setUdnId] = useState('');
-  const [productoId, setProductoId] = useState('');
+  const [empresaId, setEmpresaId] = useState<number | null>(null);
+  const [almacenId, setAlmacenId] = useState<number | null>(null);
+  const [udnId, setUdnId] = useState<number | null>(null);
+  const [productoId, setProductoId] = useState<number | null>(null);
+
   const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error'>('idle');
   const [payload, setPayload] = useState<unknown>(null);
   const [errMsg, setErrMsg] = useState('');
@@ -19,10 +21,11 @@ export default function BuscarExistencias() {
     ev.preventDefault();
     setEstado('cargando');
     try {
-      const url = `${API}/Existencias/buscar?empresaId=${encodeURIComponent(empresaId)}`
-        + `&almacenId=${encodeURIComponent(almacenId)}`
-        + `&udnId=${encodeURIComponent(udnId)}`
-        + `&productoId=${encodeURIComponent(productoId)}`;
+      const url = `${API}/Existencias/buscar?empresaId=${empresaId}`
+        + `&almacenId=${almacenId}`
+        + `&udnId=${udnId}`
+        + `&productoId=${productoId}`;
+
       const res = await getJSON(url);
       setPayload(res);
       setEstado('ok');
@@ -41,25 +44,25 @@ export default function BuscarExistencias() {
       </div>
 
       <form className="filter-panel" onSubmit={consultar}>
-        <div className="form-group">
-          <label>Empresa Id</label>
-          <input type="number" min={1} step={1} placeholder="Ej. 1" required
-            value={empresaId} onChange={(e) => setEmpresaId(e.target.value)} />
+                <div className="form-group">
+          <label>Empresa</label>
+          <SelectCatalogo catalogo="empresas" value={empresaId} required
+            onChange={(id) => { setEmpresaId(id); setUdnId(null); setAlmacenId(null); }} />
         </div>
         <div className="form-group">
-          <label>Almacén Id</label>
-          <input type="number" min={1} step={1} placeholder="Ej. 1" required
-            value={almacenId} onChange={(e) => setAlmacenId(e.target.value)} />
+          <label>UDN</label>
+          <SelectCatalogo catalogo="udn" value={udnId} empresaId={empresaId} required
+            onChange={(id) => { setUdnId(id); setAlmacenId(null); }} />
         </div>
         <div className="form-group">
-          <label>UDN Id</label>
-          <input type="number" min={1} step={1} placeholder="Ej. 1" required
-            value={udnId} onChange={(e) => setUdnId(e.target.value)} />
+          <label>Almacén</label>
+          <SelectCatalogo catalogo="almacenes" value={almacenId} empresaId={empresaId} udnId={udnId} required
+            onChange={setAlmacenId} />
         </div>
         <div className="form-group">
-          <label>Producto Id</label>
-          <input type="number" min={1} step={1} placeholder="Ej. 4" required
-            value={productoId} onChange={(e) => setProductoId(e.target.value)} />
+          <label>Producto</label>
+          <SelectCatalogo catalogo="productos" value={productoId} required
+            onChange={setProductoId} />
         </div>
         <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Consultar</button>
       </form>

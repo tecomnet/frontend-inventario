@@ -7,6 +7,7 @@ import { useUI } from '../context/UIContext';
 import { usePermisos } from '../hooks/usePermisos';
 import { API, sendForm } from '../lib/api';
 import type { ResultadoImportacion } from '../lib/api-types';
+import { SelectCatalogo } from '../components/SelectCatalogo';
 
 export default function ImportadorSims() {
   const { notify, notifyError } = useUI();
@@ -14,7 +15,7 @@ export default function ImportadorSims() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState('');
   const [dragging, setDragging] = useState(false);
-  const [productoId, setProductoId] = useState('');
+  const [productoId, setProductoId] = useState<number | null>(null);
   const [loteTecomnet, setLoteTecomnet] = useState('');
   const [loteAltan, setLoteAltan] = useState('');
   const [fechaCompra, setFechaCompra] = useState('');
@@ -32,7 +33,7 @@ export default function ImportadorSims() {
     if (!archivo) { notify('Falta archivo'); return; }
     const form = new FormData();
     form.append('archivo', archivo);
-    form.append('productoId', productoId);
+    form.append('productoId', String(productoId ?? ''));
     form.append('loteTecomnet', loteTecomnet);
     form.append('loteALtan', loteAltan);
     form.append('fechaCompra', fechaCompra);
@@ -76,8 +77,8 @@ export default function ImportadorSims() {
         </div>
 
         <div className="form-grid">
-          <div className="form-group"><label>Producto Id</label>
-            <input type="number" min={1} step={1} value={productoId} onChange={(e) => setProductoId(e.target.value)} /></div>
+          <div className="form-group"><label>Producto</label>
+            <SelectCatalogo catalogo="productos" value={productoId} onChange={setProductoId} /></div>
           <div className="form-group"><label>Lote Tecomnet</label>
             <input type="text" value={loteTecomnet} onChange={(e) => setLoteTecomnet(e.target.value)} /></div>
           <div className="form-group"><label>Lote Altan</label>
