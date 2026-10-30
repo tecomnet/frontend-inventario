@@ -11,6 +11,8 @@ import { API, sendJSON } from '../lib/api';
 import type { CreateProducto, Producto, UpdateProducto } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
+import { SelectCatalogo } from '../components/SelectCatalogo';
+
 
 /** Formulario = cuerpo del PUT; id 0 es alta. */
 const vacio: UpdateProducto = {
@@ -149,17 +151,17 @@ export default function Productos() {
                 <div className="form-group"><label>Descripción</label>
                   <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
                   <CampoError mensajes={errores.de('descripcion')} /></div>
-                <div className="form-group"><label>Marca Id</label>
-                  <input aria-invalid={!!errores.de('marcaId')} type="number" min={0} step={1} value={form.marcaId ?? 0} onChange={(e) => set('marcaId', num(e.target.value))} required />
+                                <div className="form-group"><label>Marca</label>
+                  <SelectCatalogo catalogo="marcas" value={form.marcaId} onChange={(id) => set('marcaId', id ?? 0)} invalido={!!errores.de('marcaId')} required />
                   <CampoError mensajes={errores.de('marcaId')} /></div>
-                <div className="form-group"><label>Línea Id</label>
-                  <input aria-invalid={!!errores.de('lineaId')} type="number" min={0} step={1} value={form.lineaId ?? 0} onChange={(e) => set('lineaId', num(e.target.value))} required />
+                <div className="form-group"><label>Línea</label>
+                  <SelectCatalogo catalogo="lineas" value={form.lineaId} onChange={(id) => set('lineaId', id ?? 0)} invalido={!!errores.de('lineaId')} required />
                   <CampoError mensajes={errores.de('lineaId')} /></div>
-                <div className="form-group"><label>Presentación Id</label>
-                  <input aria-invalid={!!errores.de('presentacionId')} type="number" min={0} step={1} value={form.presentacionId ?? 0} onChange={(e) => set('presentacionId', num(e.target.value))} required />
+                <div className="form-group"><label>Presentación</label>
+                  <SelectCatalogo catalogo="presentaciones" value={form.presentacionId} onChange={(id) => set('presentacionId', id ?? 0)} invalido={!!errores.de('presentacionId')} required />
                   <CampoError mensajes={errores.de('presentacionId')} /></div>
-                <div className="form-group"><label>Unidad Medida Id</label>
-                  <input aria-invalid={!!errores.de('unidadMedidaId')} type="number" min={0} step={1} value={form.unidadMedidaId ?? 0} onChange={(e) => set('unidadMedidaId', num(e.target.value))} required />
+                <div className="form-group"><label>Unidad de medida</label>
+                  <SelectCatalogo catalogo="unidades" value={form.unidadMedidaId} onChange={(id) => set('unidadMedidaId', id ?? 0)} invalido={!!errores.de('unidadMedidaId')} required />
                   <CampoError mensajes={errores.de('unidadMedidaId')} /></div>
                 <div className="form-group"><label>Material Id</label>
                   <input aria-invalid={!!errores.de('materialId')} type="number" min={0} step={1} value={form.materialId ?? 0} onChange={(e) => set('materialId', num(e.target.value))} required />
