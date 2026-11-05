@@ -11,7 +11,7 @@ import { usePermisos } from '../hooks/usePermisos';
 import { sendJSON } from '../lib/api';
 import type { CatalogoDescripcion, CreateDescripcion, UpdateDescripcion } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
-
+import ConfirmarBaja from './ConfirmarBaja';
 const CAMPOS = ['descripcion'] as const;
 
 interface Props {
@@ -22,10 +22,14 @@ interface Props {
 }
 
 export default function DescripcionCatalog({ active, titulo, singular, url }: Props) {
-  const { notify } = useUI();
+  const { notify, notifyError } = useUI();
   const { puedeEscribir } = usePermisos();
-  const listado = useListadoPaginado<CatalogoDescripcion>(url);
+  const [ busqueda, setBusqueda ] = useState('');
+  const [search, setSearch] = useState('');
+  const listado = useListadoPaginado<CatalogoDescripcion>(url, { search });
   const { items, estado, errMsg } = listado;
+  const [aBorrar, setABorrar] = useState<CatalogoDescripcion | null>(null);
+  const [borrando, setBorrando] = useState(false);
 
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -58,6 +62,27 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
     }
   };
 
+    const buscar = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    setSearch(busqueda.trim());
+    listado.irA(1);
+  };
+
+  const confirmarBaja = async () => {
+    if (!aBorrar) return;
+    setBorrando(true);
+    try {
+      await sendJSON('DELETE', `${url}/${aBorrar.id}`);
+      notify(`${singular} dada de baja.`, 'success');
+      setABorrar(null);
+      await listado.recargar();
+    } catch (err) {
+      notifyError(err, `No se pudo dar de baja: ${singular.toLowerCase()}`);
+    } finally {
+      setBorrando(false);
+    }
+  };
+
   return (
     <AppLayout active={active}>
       {vista === 'lista' ? (
@@ -73,6 +98,12 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
               </button>
             )}
           </div>
+
+                      <form className="search-container" role="search" onSubmit={buscar}>
+            <input type="search" placeholder="Buscar por descripción…" aria-label="Buscar"
+              value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Buscar</button>
+          </form>
 
           <div className="table-card p-3">
             <div className="table-responsive">
@@ -99,6 +130,9 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(c)}>
                             <i className="bi bi-pencil" />
                           </button>
+                                                    <button className="action-btn delete" title="Dar de baja" onClick={() => setABorrar(c)}>
+                            <i className="bi bi-slash-circle" />
+                          </button>
                         </td>
                       )}
                     </tr>
@@ -114,6 +148,13 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
             onPage={listado.irA} onPageSize={listado.cambiarPageSize}
             etiqueta={titulo.toLowerCase()}
           />
+                    <ConfirmarBaja
+            mensaje={aBorrar ? `¿Dar de baja "${aBorrar.descripcion}"?` : null}
+            procesando={borrando}
+            onConfirmar={confirmarBaja}
+            onCancelar={() => setABorrar(null)}
+          />
+
         </>
       ) : (
         <>

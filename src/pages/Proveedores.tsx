@@ -1,4 +1,4 @@
-// Administración de Proveedores (alta, edición). Sin baja.
+// Administración de Proveedores (alta, edición y baja).
 // Equivale a getProveedores / renderProveedorForm / guardarProveedor del panel viejo.
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
@@ -11,15 +11,19 @@ import { API, sendJSON } from '../lib/api';
 import type { CreateProveedor, Proveedor, UpdateProveedor } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
-
+import ConfirmarBaja from '../components/ConfirmarBaja';
 /** Formulario = cuerpo del PUT; id 0 es alta. */
 const vacio: UpdateProveedor = { id: 0, descripcion: '', contacto: '', diasCredito: 0, esActivo: true };
 const CAMPOS = ['descripcion', 'contacto', 'diasCredito'] as const;
 
 export default function Proveedores() {
-  const { notify } = useUI();
-  const listado = useListadoPaginado<Proveedor>(`${API}/Catalogos/proveedores`);
+  const { notify, notifyError } = useUI();
+  const [busqueda, setBusqueda] = useState('');
+  const [search, setSearch] = useState('');
+  const listado = useListadoPaginado<Proveedor>(`${API}/Catalogos/proveedores`, {search});
   const { items, estado, errMsg } = listado;
+  const [aBorrar, setABorrar] = useState<Proveedor | null>(null);
+  const [borrando, setBorrando] = useState(false);
   const { puedeEscribir } = usePermisos();
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<UpdateProveedor>(vacio);
@@ -63,6 +67,26 @@ export default function Proveedores() {
     }
   };
 
+  const buscar = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    setSearch(busqueda.trim());
+    listado.irA(1);
+  }
+
+  const confirmarBaja = async () => {
+    if (!aBorrar) return;
+    setBorrando(true);
+    try{
+      await sendJSON('DELETE', `${API}/Catalogos/proveedores/${aBorrar.id}`);
+      notify('Proveedor dado de baja.', 'success');
+      setABorrar(null);
+      await listado.recargar();
+    } catch (err) {
+      notifyError(err, 'No se pudo dar de baja el proveedor');
+    } finally {
+      setBorrando(false);    
+    }
+  };
   return (
     <AppLayout active="proveedores">
       {vista === 'lista' ? (
@@ -74,7 +98,11 @@ export default function Proveedores() {
             </div>
             {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nuevo proveedor</button>}
           </div>
-
+          <form className="search-container" role="search" onSubmit={buscar}>
+            <input type="search" placeholder="Buscar proveedor…" aria-label="Buscar"
+              value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Buscar</button>
+          </form>
           <div className="table-card p-3">
             <div className="table-responsive">
               <table className="table table-cat align-middle">
@@ -94,6 +122,7 @@ export default function Proveedores() {
                       <td>{p.diasCredito ?? 0}</td><td>{siNo(p.esActivo)}</td>
                       {puedeEscribir && <td className="text-end">
                         <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(p)}><i className="bi bi-pencil" /></button>
+                        <button className="action-btn delete" title="Dar de baja" onClick={() => setABorrar(p)}><i className="bi bi-slash-circle" /></button>
                       </td>}
                     </tr>
                   ))}
@@ -108,6 +137,13 @@ export default function Proveedores() {
             onPage={listado.irA} onPageSize={listado.cambiarPageSize}
             etiqueta="proveedores"
           />
+            <ConfirmarBaja
+            mensaje={aBorrar ? `¿Dar de baja el proveedor "${aBorrar.descripcion}"?` : null}
+            procesando={borrando}
+            onConfirmar={confirmarBaja}
+            onCancelar={() => setABorrar(null)}
+          />
+        
         </>
       ) : (
         <>
