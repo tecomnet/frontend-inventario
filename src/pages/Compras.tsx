@@ -4,10 +4,11 @@ import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
 import { API, getJSON } from '../lib/api';
 import { describirError } from '../lib/errores';
+import { SelectCatalogo } from '../components/SelectCatalogo';
 
 export default function Compras() {
-  const [empresaId, setEmpresaId] = useState('');
-  const [udnId, setUdnId] = useState('');
+  const [empresaId, setEmpresaId] = useState<number | null>(null);
+  const [udnId, setUdnId] = useState<number | null>(null);
   const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error'>('idle');
   const [payload, setPayload] = useState<unknown>(null);
   const [errMsg, setErrMsg] = useState('');
@@ -17,7 +18,7 @@ export default function Compras() {
     setEstado('cargando');
     try {
       const res = await getJSON(
-        `${API}/Compras?empresaId=${encodeURIComponent(empresaId)}&udnId=${encodeURIComponent(udnId)}`,
+        `${API}/Compras?empresaId={empresaId}&udnId=${udnId}`,
       );
       setPayload(res);
       setEstado('ok');
@@ -36,22 +37,22 @@ export default function Compras() {
       </div>
 
       <form className="filter-panel" onSubmit={consultar}>
-        <div className="form-group">
-          <label>Empresa Id</label>
-          <input type="number" min={1} step={1} placeholder="Ej. 1" required
-            value={empresaId} onChange={(e) => setEmpresaId(e.target.value)} />
+                <div className="form-group">
+          <label>Empresa</label>
+          <SelectCatalogo catalogo="empresas" value={empresaId} required
+            onChange={(id) => { setEmpresaId(id); setUdnId(null); }} />
         </div>
         <div className="form-group">
-          <label>UDN Id</label>
-          <input type="number" min={1} step={1} placeholder="Ej. 1" required
-            value={udnId} onChange={(e) => setUdnId(e.target.value)} />
+          <label>UDN</label>
+          <SelectCatalogo catalogo="udn" value={udnId} empresaId={empresaId} required
+            onChange={setUdnId} />
         </div>
         <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Consultar</button>
       </form>
 
       <div className="result-space">
         {estado === 'idle' && (
-          <div className="empty-state"><i className="bi bi-cart" /><h2>Compras</h2><p>Ingresa los parámetros para consultar.</p></div>
+          <div className="empty-state"><i className="bi bi-cart" /><h2>Compras</h2><p>Elige los parámetros para consultar.</p></div>
         )}
         {estado === 'cargando' && <div className="loading-state">Consultando compras…</div>}
         {estado === 'error' && (

@@ -1,4 +1,4 @@
-// Administración de Líneas (alta, edición). Sin baja.
+// Administración de Líneas (alta, edición, búsqueda y baja).
 // Equivale a getLineas / renderLineaForm / guardarLinea del panel viejo.
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
@@ -11,15 +11,20 @@ import { API, sendJSON } from '../lib/api';
 import type { CreateLinea, Linea, UpdateLinea } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
+import ConfirmarBaja from '../components/ConfirmarBaja';
 
 /** Formulario = cuerpo del PUT; id 0 es alta. */
 const vacio: UpdateLinea = { id: 0, descripcion: '', idLineaPadre: 0, esActiva: true };
 const CAMPOS = ['descripcion', 'idLineaPadre'] as const;
 
 export default function Lineas() {
-  const { notify } = useUI();
-  const listado = useListadoPaginado<Linea>(`${API}/Catalogos/lineas`);
+  const { notify, notifyError } = useUI();
+  const [busqueda, setBusqueda] = useState('');
+  const [search, setSearch] = useState('');
+  const listado = useListadoPaginado<Linea>(`${API}/Catalogos/lineas`, { search });
   const { items, estado, errMsg } = listado;
+  const [aBorrar, setABorrar] = useState<Linea | null>(null);
+  const [borrando, setBorrando] = useState(false);
   const { puedeEscribir } = usePermisos();
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<UpdateLinea>(vacio);
@@ -60,6 +65,27 @@ export default function Lineas() {
     }
   };
 
+    const buscar = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    setSearch(busqueda.trim());
+    listado.irA(1);
+  };
+
+  const confirmarBaja = async () => {
+    if (!aBorrar) return;
+    setBorrando(true);
+    try {
+      await sendJSON('DELETE', `${API}/Catalogos/lineas/${aBorrar.id}`);
+      notify('Línea dada de baja.', 'success');
+      setABorrar(null);
+      await listado.recargar();
+    } catch (err) {
+      notifyError(err, 'No se pudo dar de baja la línea');
+    } finally {
+      setBorrando(false);
+    }
+  };
+
   return (
     <AppLayout active="lineas">
       {vista === 'lista' ? (
@@ -71,6 +97,12 @@ export default function Lineas() {
             </div>
             {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva línea</button>}
           </div>
+
+          <form className="search-container" role="search" onSubmit={buscar}>
+            <input type="search" placeholder="Buscar línea…" aria-label="Buscar"
+              value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Buscar</button>
+          </form>
 
           <div className="table-card p-3">
             <div className="table-responsive">
@@ -90,6 +122,7 @@ export default function Lineas() {
                       <td>{l.id}</td><td>{l.descripcion}</td><td>{l.idLineaPadre ?? '-'}</td><td>{siNo(l.esActiva)}</td>
                       {puedeEscribir && <td className="text-end">
                         <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(l)}><i className="bi bi-pencil" /></button>
+                        <button className="action-btn delete" title="Dar de baja" onClick={() => setABorrar(l)}><i className="bi bi-slash-circle" /></button>
                       </td>}
                     </tr>
                   ))}
@@ -103,6 +136,12 @@ export default function Lineas() {
             totalRecords={listado.totalRecords} totalPages={listado.totalPages}
             onPage={listado.irA} onPageSize={listado.cambiarPageSize}
             etiqueta="líneas"
+          />
+                    <ConfirmarBaja
+            mensaje={aBorrar ? `¿Dar de baja la línea "${aBorrar.descripcion}"?` : null}
+            procesando={borrando}
+            onConfirmar={confirmarBaja}
+            onCancelar={() => setABorrar(null)}
           />
         </>
       ) : (

@@ -4,10 +4,15 @@ import Paginacion from '../components/Paginacion';
 import { API } from '../lib/api';
 import type { Existencia } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
+import { nombreDe, useCatalogo } from '../hooks/useCatalogo';
 
 export default function Existencias() {
   const listado = useListadoPaginado<Existencia>(`${API}/Existencias`);
   const { items, estado, errMsg } = listado;
+  const empresas = useCatalogo('empresas')
+  const udns = useCatalogo('udn')
+  const almacenes = useCatalogo('almacenes')
+  const productos = useCatalogo('productos')
 
   return (
     <AppLayout active="existencias">
@@ -33,8 +38,8 @@ export default function Existencias() {
               )}
               {estado === 'ok' && items.map((e, i) => (
                 <tr key={i}>
-                  <td>{e.empresaId}</td><td>{e.udnId}</td><td>{e.almacenId}</td>
-                  <td>{e.productoId}</td><td>{e.cantidad}</td><td>{e.cantidadPiezas}</td>
+                  <td>{nombreDe(empresas, e.empresaId)}</td><td>{nombreDe(udns, e.udnId)}</td><td>{nombreDe(almacenes, e.almacenId)}</td>
+                  <td>{nombreDe(productos, e.productoId)}</td><td>{e.cantidad}</td><td>{e.cantidadPiezas}</td>
                 </tr>
               ))}
             </tbody>
