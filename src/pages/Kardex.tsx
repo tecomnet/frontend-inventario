@@ -5,6 +5,7 @@ import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
 import { API, getJSON } from '../lib/api';
 import { describirError } from '../lib/errores';
+import { SelectCatalogo } from '../components/SelectCatalogo';
 
 type Mode = 'productoEmpresa' | 'empresa' | 'completo';
 
@@ -16,8 +17,8 @@ const MODES: Record<Mode, { ready: boolean; help: string }> = {
 
 export default function Kardex() {
   const [mode, setMode] = useState<Mode>('productoEmpresa');
-  const [idProducto, setIdProducto] = useState('');
-  const [idEmpresa, setIdEmpresa] = useState('');
+    const [idProducto, setIdProducto] = useState<number | null>(null);
+  const [idEmpresa, setIdEmpresa] = useState<number | null>(null);
   const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error' | 'pendiente'>('idle');
   const [payload, setPayload] = useState<unknown>(null);
   const [errMsg, setErrMsg] = useState('');
@@ -30,7 +31,7 @@ export default function Kardex() {
     setEstado('cargando');
     try {
       const res = await getJSON(
-        `${API}/Kardex?idProducto=${encodeURIComponent(idProducto)}&idEmpresa=${encodeURIComponent(idEmpresa)}`,
+        `${API}/Kardex?idProducto=${idProducto}&idEmpresa=${idEmpresa}`,
       );
       setPayload(res);
       setEstado('ok');
@@ -58,18 +59,18 @@ export default function Kardex() {
           </select>
           <small>{cfg.help}</small>
         </div>
-        {mode === 'productoEmpresa' && (
+                {mode === 'productoEmpresa' && (
           <div className="form-group">
-            <label>Id Producto</label>
-            <input type="number" min={1} step={1} placeholder="Ej. 4" required
-              value={idProducto} onChange={(e) => setIdProducto(e.target.value)} />
+            <label>Producto</label>
+            <SelectCatalogo catalogo="productos" value={idProducto} required
+              onChange={setIdProducto} />
           </div>
         )}
         {mode !== 'completo' && (
           <div className="form-group">
-            <label>Id Empresa</label>
-            <input type="number" min={1} step={1} placeholder="Ej. 1" required
-              value={idEmpresa} onChange={(e) => setIdEmpresa(e.target.value)} />
+            <label>Empresa</label>
+            <SelectCatalogo catalogo="empresas" value={idEmpresa} required
+              onChange={setIdEmpresa} />
           </div>
         )}
         <button className="btn btn-tec" type="submit" disabled={!cfg.ready}>

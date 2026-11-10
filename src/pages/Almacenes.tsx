@@ -11,6 +11,8 @@ import { API, sendJSON } from '../lib/api';
 import type { Almacen, CreateAlmacen, UpdateAlmacen } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
+import { SelectCatalogo } from '../components/SelectCatalogo';
+import { nombreDe, useCatalogo } from '../hooks/useCatalogo';
 
 // La API lista con id/empresaId/udnId y el PUT recibe idAlmacen/idEmpresa/idUdn:
 // el formulario trabaja con los nombres del PUT.
@@ -36,6 +38,8 @@ export default function Almacenes() {
   const { notify, notifyError } = useUI();
   const { puedeEscribir } = usePermisos();
   const listado = useListadoPaginado<Almacen>(`${API}/Catalogos/almacenes`);
+  const empresas = useCatalogo('empresas');
+  const udns = useCatalogo('udn');
   const { items, estado, errMsg } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<UpdateAlmacen>(vacio);
@@ -56,7 +60,6 @@ export default function Almacenes() {
     setForm((f) => ({ ...f, [k]: v }));
     errores.limpiar(k);
   };
-  const num = (v: string) => Number(v) || 0;
 
   const guardar = async (ev: React.FormEvent) => {
     ev.preventDefault();
@@ -131,7 +134,7 @@ export default function Almacenes() {
                     const a = aForm(raw);
                     return (
                       <tr key={`${a.idEmpresa}-${a.idUdn}-${a.idAlmacen}-${i}`}>
-                        <td>{a.idAlmacen}</td><td>{a.descripcion}</td><td>{a.tipo}</td><td>{a.idEmpresa}</td><td>{a.idUdn}</td><td>{siNo(a.esActivo)}</td>
+                        <td>{a.idAlmacen}</td><td>{a.descripcion}</td><td>{a.tipo}</td><td>{nombreDe(empresas, a.idEmpresa)}</td><td>{nombreDe(udns, a.idUdn)}</td><td>{siNo(a.esActivo)}</td>
                         {puedeEscribir && <td className="text-end">
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(a)}><i className="bi bi-pencil" /></button>
                           <button className="action-btn disable" title="Dar de baja" onClick={() => baja(a)}><i className="bi bi-slash-circle" /></button>
@@ -163,12 +166,12 @@ export default function Almacenes() {
                 <div className="form-group"><label>Tipo</label>
                   <input aria-invalid={!!errores.de('tipo')} type="text" value={form.tipo} onChange={(e) => set('tipo', e.target.value)} required />
                   <CampoError mensajes={errores.de('tipo')} /></div>
-                <div className="form-group"><label>Empresa Id</label>
-                  <input aria-invalid={!!errores.de('idEmpresa')} type="number" min={1} step={1} value={form.idEmpresa} onChange={(e) => set('idEmpresa', num(e.target.value))} disabled={editando} required />
+                <div className="form-group"><label>Empresa</label>
+                <SelectCatalogo catalogo='empresas' value={form.idEmpresa} onChange={(id) => {set('idEmpresa', id ?? 0); set('idUdn', 0);}} invalido={!!errores.de('idEmpresa')} disabled={editando} required />
                   <CampoError mensajes={errores.de('idEmpresa')} /></div>
-                <div className="form-group"><label>UDN Id</label>
-                  <input aria-invalid={!!errores.de('idUdn')} type="number" min={1} step={1} value={form.idUdn} onChange={(e) => set('idUdn', num(e.target.value))} disabled={editando} required />
-                  <CampoError mensajes={errores.de('idUdn')} /></div>
+                <div className="form-group"><label>UDN</label>
+<SelectCatalogo catalogo="udn" value={form.idUdn} empresaId={form.idEmpresa} onChange={(id) => set('idUdn', id ?? 0)} invalido={!!errores.de('idUdn')} disabled={editando} required />                  
+  <CampoError mensajes={errores.de('idUdn')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActivo ?? true} onChange={(e) => set('esActivo', e.target.checked)} /> Activo</label>
               </div>
             </form>

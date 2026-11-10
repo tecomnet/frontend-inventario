@@ -5,10 +5,11 @@ import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
 import { API, getJSON } from '../lib/api';
 import { describirError } from '../lib/errores';
+import { SelectCatalogo } from '../components/SelectCatalogo';
 
 export default function Movimientos() {
-  const [empresaId, setEmpresaId] = useState('');
-  const [udnId, setUdnId] = useState('');
+  const [empresaId, setEmpresaId] = useState<number | null>(null);
+  const [udnId, setUdnId] = useState<number |  null>(null);
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
   const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error'>('idle');
@@ -19,7 +20,7 @@ export default function Movimientos() {
     ev.preventDefault();
     setEstado('cargando');
     try {
-      const params = new URLSearchParams({ empresaId, udnId });
+      const params = new URLSearchParams({ empresaId: String(empresaId), udnId: String(udnId) });
       if (desde) params.set('fechaDesde', desde);
       if (hasta) params.set('fechaHasta', hasta);
       const res = await getJSON(`${API}/MovimientosDeAlmacen?${params.toString()}`);
@@ -40,15 +41,15 @@ export default function Movimientos() {
       </div>
 
       <form className="filter-panel" onSubmit={consultar}>
-        <div className="form-group">
-          <label>Empresa Id</label>
-          <input type="number" min={1} step={1} placeholder="Ej. 1" required
-            value={empresaId} onChange={(e) => setEmpresaId(e.target.value)} />
+                <div className="form-group">
+          <label>Empresa</label>
+          <SelectCatalogo catalogo="empresas" value={empresaId} required
+            onChange={(id) => { setEmpresaId(id); setUdnId(null); }} />
         </div>
         <div className="form-group">
-          <label>UDN Id</label>
-          <input type="number" min={1} step={1} placeholder="Ej. 1" required
-            value={udnId} onChange={(e) => setUdnId(e.target.value)} />
+          <label>UDN</label>
+          <SelectCatalogo catalogo="udn" value={udnId} empresaId={empresaId} required
+            onChange={setUdnId} />
         </div>
         <div className="form-group">
           <label>Fecha desde</label>

@@ -11,6 +11,8 @@ import { API, sendJSON } from '../lib/api';
 import type { CreateUnidadNegocio, UnidadNegocio, UpdateUnidadNegocio } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
+import { SelectCatalogo } from '../components/SelectCatalogo';
+import { nombreDe, useCatalogo } from '../hooks/useCatalogo';
 
 // La API lista con id/empresaId y el PUT recibe idUdn/idEmpresa: el formulario
 // trabaja con los nombres del PUT (idUdn 0 es alta).
@@ -21,6 +23,7 @@ export default function UnidadesNegocio() {
   const { notify, notifyError } = useUI();
   const { puedeEscribir } = usePermisos();
   const listado = useListadoPaginado<UnidadNegocio>(`${API}/Catalogos/unidadesnegocio`);
+  const empresas = useCatalogo('empresas');
   const { items, estado, errMsg } = listado;
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<UpdateUnidadNegocio>(vacio);
@@ -37,8 +40,7 @@ export default function UnidadesNegocio() {
     setForm((f) => ({ ...f, [k]: v }));
     errores.limpiar(k);
   };
-  const num = (v: string) => Number(v) || 0;
-
+  
   const guardar = async (ev: React.FormEvent) => {
     ev.preventDefault();
     const { idUdn } = form;
@@ -90,7 +92,7 @@ export default function UnidadesNegocio() {
               <table className="table table-cat align-middle">
                 <thead>
                   <tr>
-                    <th>Id</th><th>Descripción</th><th>Empresa Id</th><th>Activa</th>{puedeEscribir && <th className="text-end">Acciones</th>}
+                    <th>Id</th><th>Descripción</th><th>Empresa</th><th>Activa</th>{puedeEscribir && <th className="text-end">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -101,7 +103,7 @@ export default function UnidadesNegocio() {
                     const { id } = u;
                     return (
                       <tr key={id}>
-                        <td>{id}</td><td>{u.descripcion}</td><td>{u.empresaId}</td><td>{siNo(u.esActiva)}</td>
+                        <td>{id}</td><td>{u.descripcion}</td><td>{nombreDe(empresas, u.empresaId)}</td><td>{siNo(u.esActiva)}</td>
                         {puedeEscribir && <td className="text-end">
                           <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(u)}><i className="bi bi-pencil" /></button>
                           <button className="action-btn disable" title="Dar de baja" onClick={() => baja(id)}><i className="bi bi-slash-circle" /></button>
@@ -130,8 +132,8 @@ export default function UnidadesNegocio() {
                 <div className="form-group"><label>Descripción</label>
                   <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
                   <CampoError mensajes={errores.de('descripcion')} /></div>
-                <div className="form-group"><label>Empresa Id</label>
-                  <input aria-invalid={!!errores.de('idEmpresa')} type="number" min={1} step={1} value={form.idEmpresa ?? 0} onChange={(e) => set('idEmpresa', num(e.target.value))} required />
+                                <div className="form-group"><label>Empresa</label>
+                  <SelectCatalogo catalogo="empresas" value={form.idEmpresa} onChange={(id) => set('idEmpresa', id ?? 0)} invalido={!!errores.de('idEmpresa')} required />
                   <CampoError mensajes={errores.de('idEmpresa')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActiva ?? true} onChange={(e) => set('esActiva', e.target.checked)} /> Activa</label>
               </div>
