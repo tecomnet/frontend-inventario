@@ -11,6 +11,7 @@ import UnidadesMedida from './pages/UnidadesMedida';
 import Proveedores from './pages/Proveedores';
 import Lineas from './pages/Lineas';
 import Compras from './pages/Compras';
+import Recepciones from './pages/Recepciones';
 import Movimientos from './pages/Movimientos';
 import Existencias from './pages/Existencias';
 import BuscarExistencias from './pages/BuscarExistencias';
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/proveedores" element={auth(<Proveedores />)} />
         <Route path="/lineas" element={auth(<Lineas />)} />
         <Route path="/compras" element={auth(<Compras />)} />
+        <Route path="/recepciones" element={auth(<Recepciones />)} />
         <Route path="/movimientos" element={auth(<Movimientos />)} />
         <Route path="/existencias" element={auth(<Existencias />)} />
         <Route path="/buscar-existencias" element={auth(<BuscarExistencias />)} />

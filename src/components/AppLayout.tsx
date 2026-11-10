@@ -30,6 +30,7 @@ const NAV: NavItem[] = [
   {
     group: 'Compras', icon: 'bi-cart', items: [
       { key: 'compras', to: '/compras', icon: 'bi-cart-check', label: 'Compras' },
+      { key: 'recepciones', to: '/recepciones', icon: 'bi-box-arrow-in-down', label: 'Recepciones' },
     ],
   },
   {
