@@ -3,8 +3,10 @@
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
-import { API, getJSON } from '../lib/api';
-import { describirError } from '../lib/errores';
+import Paginacion from '../components/Paginacion';
+import { API } from '../lib/api';
+import type { Filtros } from '../lib/paged';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { SelectCatalogo } from '../components/SelectCatalogo';
 
 export default function Movimientos() {
@@ -12,24 +14,15 @@ export default function Movimientos() {
   const [udnId, setUdnId] = useState<number |  null>(null);
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
-  const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error'>('idle');
-  const [payload, setPayload] = useState<unknown>(null);
-  const [errMsg, setErrMsg] = useState('');
+  const [aplicados, setAplicados] = useState<Filtros | null>(null);
+  const listado = useListadoPaginado<Record<string, unknown>>(`${API}/MovimientosDeAlmacen`, aplicados ?? {});
+  const { items, estado, errMsg } = listado;
 
-  const consultar = async (ev: React.FormEvent) => {
+
+    const consultar = (ev: React.FormEvent) => {
     ev.preventDefault();
-    setEstado('cargando');
-    try {
-      const params = new URLSearchParams({ empresaId: String(empresaId), udnId: String(udnId) });
-      if (desde) params.set('fechaDesde', desde);
-      if (hasta) params.set('fechaHasta', hasta);
-      const res = await getJSON(`${API}/MovimientosDeAlmacen?${params.toString()}`);
-      setPayload(res);
-      setEstado('ok');
-    } catch (err) {
-      setErrMsg(describirError(err).mensaje);
-      setEstado('error');
-    }
+    setAplicados({ empresaId, udnId, fechaDesde: desde, fechaHasta: hasta });
+    listado.irA(1);
   };
 
   return (
@@ -62,16 +55,24 @@ export default function Movimientos() {
         <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Consultar</button>
       </form>
 
-      <div className="result-space">
-        {estado === 'idle' && (
+            <div className="result-space">
+        {aplicados === null && (
           <div className="empty-state"><i className="bi bi-list-check" /><h2>Movimientos</h2><p>Ingresa los parámetros para consultar.</p></div>
         )}
-        {estado === 'cargando' && <div className="loading-state">Consultando movimientos…</div>}
-        {estado === 'error' && (
+        {aplicados !== null && estado === 'cargando' && <div className="loading-state">Consultando movimientos…</div>}
+        {aplicados !== null && estado === 'error' && (
           <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando movimientos</h2><p>{errMsg}</p></div>
         )}
-        {estado === 'ok' && (
-          <DynamicTable payload={payload} emptyTitle="Sin resultados" emptyMessage="No se encontraron movimientos." />
+        {aplicados !== null && estado === 'ok' && (
+          <>
+            <DynamicTable payload={items} emptyTitle="Sin resultados" emptyMessage="No se encontraron movimientos." />
+            <Paginacion
+              page={listado.page} pageSize={listado.pageSize}
+              totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+              onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+              etiqueta="movimientos"
+            />
+          </>
         )}
       </div>
     </AppLayout>

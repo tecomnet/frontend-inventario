@@ -2,31 +2,26 @@
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
-import { API, getJSON } from '../lib/api';
-import { describirError } from '../lib/errores';
+import Paginacion from '../components/Paginacion';
+import { API } from '../lib/api';
+import type { Filtros } from '../lib/paged';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { SelectCatalogo } from '../components/SelectCatalogo';
 
 export default function Compras() {
   const [empresaId, setEmpresaId] = useState<number | null>(null);
   const [udnId, setUdnId] = useState<number | null>(null);
-  const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error'>('idle');
-  const [payload, setPayload] = useState<unknown>(null);
-  const [errMsg, setErrMsg] = useState('');
+  const [aplicados, setAplicados] = useState<Filtros | null>(null);
+  const listado = useListadoPaginado<Record<string, unknown>>(`${API}/Compras`, aplicados ?? {});
+  const { items, estado, errMsg } = listado;
 
-  const consultar = async (ev: React.FormEvent) => {
+
+    const consultar = (ev: React.FormEvent) => {
     ev.preventDefault();
-    setEstado('cargando');
-    try {
-      const res = await getJSON(
-        `${API}/Compras?empresaId={empresaId}&udnId=${udnId}`,
-      );
-      setPayload(res);
-      setEstado('ok');
-    } catch (err) {
-      setErrMsg(describirError(err).mensaje);
-      setEstado('error');
-    }
+    setAplicados({ empresaId, udnId });
+    listado.irA(1);
   };
+
 
   return (
     <AppLayout active="compras">
@@ -50,16 +45,24 @@ export default function Compras() {
         <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Consultar</button>
       </form>
 
-      <div className="result-space">
-        {estado === 'idle' && (
+            <div className="result-space">
+        {aplicados === null && (
           <div className="empty-state"><i className="bi bi-cart" /><h2>Compras</h2><p>Elige los parámetros para consultar.</p></div>
         )}
-        {estado === 'cargando' && <div className="loading-state">Consultando compras…</div>}
-        {estado === 'error' && (
+        {aplicados !== null && estado === 'cargando' && <div className="loading-state">Consultando compras…</div>}
+        {aplicados !== null && estado === 'error' && (
           <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando compras</h2><p>{errMsg}</p></div>
         )}
-        {estado === 'ok' && (
-          <DynamicTable payload={payload} emptyTitle="Sin resultados" emptyMessage="No se encontraron compras." />
+        {aplicados !== null && estado === 'ok' && (
+          <>
+            <DynamicTable payload={items} emptyTitle="Sin resultados" emptyMessage="No se encontraron compras." />
+            <Paginacion
+              page={listado.page} pageSize={listado.pageSize}
+              totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+              onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+              etiqueta="compras"
+            />
+          </>
         )}
       </div>
     </AppLayout>
