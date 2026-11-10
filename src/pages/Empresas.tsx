@@ -1,4 +1,4 @@
-// Administración de Empresas (alta, edición).
+// Administración de Empresas (alta, edición, búsqueda y baja).
 // Equivale a getEmpresas / renderEmpresaForm / guardarEmpresa del panel viejo.
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
@@ -11,15 +11,20 @@ import { API, sendJSON } from '../lib/api';
 import type { CreateEmpresa, Empresa, UpdateEmpresa } from '../lib/api-types';
 import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { siNo } from '../lib/format';
+import ConfirmarBaja from '../components/ConfirmarBaja';
 
 /** Formulario = cuerpo del PUT; id 0 es alta. */
 const vacio: UpdateEmpresa = { id: 0, descripcion: '', rfc: '', esActiva: true };
 const CAMPOS = ['descripcion', 'rfc'] as const;
 
 export default function Empresas() {
-  const { notify } = useUI();
-  const listado = useListadoPaginado<Empresa>(`${API}/Catalogos/empresas`);
+    const { notify, notifyError } = useUI();
+  const [busqueda, setBusqueda] = useState('');
+  const [search, setSearch] = useState('');
+  const listado = useListadoPaginado<Empresa>(`${API}/Catalogos/empresas`, { search });
   const { items, estado, errMsg } = listado;
+  const [aBorrar, setABorrar] = useState<Empresa | null>(null);
+  const [borrando, setBorrando] = useState(false);
   const { puedeEscribir } = usePermisos();
   const [vista, setVista] = useState<'lista' | 'form'>('lista');
   const [form, setForm] = useState<UpdateEmpresa>(vacio);
@@ -58,6 +63,27 @@ export default function Empresas() {
     }
   };
 
+    const buscar = (ev: React.FormEvent) => {
+    ev.preventDefault();
+    setSearch(busqueda.trim());
+    listado.irA(1);
+  };
+
+  const confirmarBaja = async () => {
+    if (!aBorrar) return;
+    setBorrando(true);
+    try {
+      await sendJSON('DELETE', `${API}/Catalogos/empresas/${aBorrar.id}`);
+      notify('Empresa dada de baja.', 'success');
+      setABorrar(null);
+      await listado.recargar();
+    } catch (err) {
+      notifyError(err, 'No se pudo dar de baja la empresa');
+    } finally {
+      setBorrando(false);
+    }
+  };
+
   return (
     <AppLayout active="empresas">
       {vista === 'lista' ? (
@@ -69,6 +95,12 @@ export default function Empresas() {
             </div>
             {puedeEscribir && <button className="btn btn-tec" onClick={abrirAlta}><i className="bi bi-plus-lg" /> Nueva empresa</button>}
           </div>
+
+          <form className="search-container" role="search" onSubmit={buscar}>
+            <input type="search" placeholder="Buscar empresa…" aria-label="Buscar"
+              value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+            <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Buscar</button>
+          </form>
 
           <div className="table-card p-3">
             <div className="table-responsive">
@@ -87,6 +119,7 @@ export default function Empresas() {
                       <td>{e.id}</td><td>{e.descripcion}</td><td>{e.rfc}</td><td>{siNo(e.esActiva)}</td>
                       {puedeEscribir && <td className="text-end">
                         <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(e)}><i className="bi bi-pencil" /></button>
+                        <button className="action-btn delete" title="Dar de baja" onClick={() => setABorrar(e)}><i className="bi bi-slash-circle" /></button>
                       </td>}
                     </tr>
                   ))}
@@ -101,6 +134,13 @@ export default function Empresas() {
             onPage={listado.irA} onPageSize={listado.cambiarPageSize}
             etiqueta="empresas"
           />
+                    <ConfirmarBaja
+            mensaje={aBorrar ? `¿Dar de baja la empresa "${aBorrar.descripcion}"?` : null}
+            procesando={borrando}
+            onConfirmar={confirmarBaja}
+            onCancelar={() => setABorrar(null)}
+          />
+
         </>
       ) : (
         <>
