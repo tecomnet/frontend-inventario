@@ -1,45 +1,42 @@
 // Consulta de Kardex. Equivale a renderKardex del panel viejo.
-// Solo el modo "por empresa y producto" está disponible en la API.
+// Tres alcances: completo, por empresa, o por empresa y producto.
 import { useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import DynamicTable from '../components/DynamicTable';
-import { API, getJSON } from '../lib/api';
-import { describirError } from '../lib/errores';
+import Paginacion from '../components/Paginacion';
+import { API } from '../lib/api';
+import type { Filtros } from '../lib/paged';
+import { useListadoPaginado } from '../lib/useListadoPaginado';
 import { SelectCatalogo } from '../components/SelectCatalogo';
 
 type Mode = 'productoEmpresa' | 'empresa' | 'completo';
 
-const MODES: Record<Mode, { ready: boolean; help: string }> = {
-  productoEmpresa: { ready: true, help: 'Usa el endpoint actual: /api/Kardex?idProducto=&idEmpresa=.' },
-  empresa: { ready: false, help: 'Pendiente: cuando exista, consultará el Kardex por empresa.' },
-  completo: { ready: false, help: 'Pendiente: cuando exista, consultará el Kardex completo.' },
+const MODES: Record<Mode, {help: string }> = {
+  productoEmpresa: { help: 'Usa el endpoint actual: /api/Kardex?idProducto=&idEmpresa=.' },
+  empresa: { help: 'Movimientos de todos los productos de una empresa.' },
+  completo: {  help: 'Movimientos de todas las empresas.' },
 };
 
 export default function Kardex() {
   const [mode, setMode] = useState<Mode>('productoEmpresa');
     const [idProducto, setIdProducto] = useState<number | null>(null);
   const [idEmpresa, setIdEmpresa] = useState<number | null>(null);
-  const [estado, setEstado] = useState<'idle' | 'cargando' | 'ok' | 'error' | 'pendiente'>('idle');
-  const [payload, setPayload] = useState<unknown>(null);
-  const [errMsg, setErrMsg] = useState('');
+  const [aplicados, setAplicados] = useState<Filtros | null>(null);
+  const listado = useListadoPaginado<Record<string, unknown>>(`${API}/Kardex`, aplicados ?? {});
+  const { items, estado, errMsg } = listado;
+
 
   const cfg = MODES[mode];
 
-  const consultar = async (ev: React.FormEvent) => {
+    const consultar = (ev: React.FormEvent) => {
     ev.preventDefault();
-    if (!cfg.ready) { setEstado('pendiente'); return; }
-    setEstado('cargando');
-    try {
-      const res = await getJSON(
-        `${API}/Kardex?idProducto=${idProducto}&idEmpresa=${idEmpresa}`,
-      );
-      setPayload(res);
-      setEstado('ok');
-    } catch (err) {
-      setErrMsg(describirError(err).mensaje);
-      setEstado('error');
-    }
+    setAplicados({
+      idEmpresa: mode === 'completo' ? null : idEmpresa,
+      idProducto: mode === 'productoEmpresa' ? idProducto : null,
+    });
+    listado.irA(1);
   };
+
 
   return (
     <AppLayout active="kardex">
@@ -54,8 +51,8 @@ export default function Kardex() {
           <label>Tipo de consulta</label>
           <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
             <option value="productoEmpresa">Por empresa y producto</option>
-            <option value="empresa">Por empresa (pendiente)</option>
-            <option value="completo">Kardex completo (pendiente)</option>
+            <option value="empresa">Por empresa</option>
+            <option value="completo">Kardex completo</option>
           </select>
           <small>{cfg.help}</small>
         </div>
@@ -73,24 +70,29 @@ export default function Kardex() {
               onChange={setIdEmpresa} />
           </div>
         )}
-        <button className="btn btn-tec" type="submit" disabled={!cfg.ready}>
+        <button className="btn btn-tec" type="submit">
           <i className="bi bi-search" /> Consultar
         </button>
       </form>
 
-      <div className="result-space">
-        {estado === 'idle' && (
+            <div className="result-space">
+        {aplicados === null && (
           <div className="empty-state"><i className="bi bi-graph-up" /><h2>Kardex</h2><p>Ingresa los parámetros para consultar la información.</p></div>
         )}
-        {estado === 'pendiente' && (
-          <div className="empty-state"><i className="bi bi-tools" /><h2>Endpoint pendiente</h2><p>{cfg.help}</p></div>
-        )}
-        {estado === 'cargando' && <div className="loading-state">Consultando Kardex…</div>}
-        {estado === 'error' && (
+        {aplicados !== null && estado === 'cargando' && <div className="loading-state">Consultando Kardex…</div>}
+        {aplicados !== null && estado === 'error' && (
           <div className="empty-state"><i className="bi bi-exclamation-triangle" /><h2>Error cargando Kardex</h2><p>{errMsg}</p></div>
         )}
-        {estado === 'ok' && (
-          <DynamicTable payload={payload} emptyTitle="Sin resultados" emptyMessage="No se encontraron movimientos para esos parámetros." />
+        {aplicados !== null && estado === 'ok' && (
+          <>
+            <DynamicTable payload={items} emptyTitle="Sin resultados" emptyMessage="No se encontraron movimientos para esos parámetros." />
+            <Paginacion
+              page={listado.page} pageSize={listado.pageSize}
+              totalRecords={listado.totalRecords} totalPages={listado.totalPages}
+              onPage={listado.irA} onPageSize={listado.cambiarPageSize}
+              etiqueta="movimientos"
+            />
+          </>
         )}
       </div>
     </AppLayout>
