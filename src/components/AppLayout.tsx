@@ -36,6 +36,7 @@ const NAV: NavItem[] = [
   {
     group: 'Inventarios', icon: 'bi-list-check', items: [
       { key: 'movimientos', to: '/movimientos', icon: 'bi-arrow-left-right', label: 'Movimientos de Almacén' },
+      {key: 'ajustes', to:'/ajustes', icon: 'bi-sliders', label:'Ajustes de inventario'},
       { key: 'existencias', to: '/existencias', icon: 'bi-stack', label: 'Existencias (listado)' },
       { key: 'buscar-existencias', to: '/buscar-existencias', icon: 'bi-search', label: 'Buscar Existencias' },
     ],

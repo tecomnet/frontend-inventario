@@ -13,6 +13,7 @@ import Lineas from './pages/Lineas';
 import Compras from './pages/Compras';
 import Recepciones from './pages/Recepciones';
 import Movimientos from './pages/Movimientos';
+import Ajustes from './pages/Ajustes';
 import Existencias from './pages/Existencias';
 import BuscarExistencias from './pages/BuscarExistencias';
 import Importador from './pages/Importador';
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/compras" element={auth(<Compras />)} />
         <Route path="/recepciones" element={auth(<Recepciones />)} />
         <Route path="/movimientos" element={auth(<Movimientos />)} />
+        <Route path="/ajustes" element={auth(<Ajustes />)} />
         <Route path="/existencias" element={auth(<Existencias />)} />
         <Route path="/buscar-existencias" element={auth(<BuscarExistencias />)} />
         <Route path="/importador" element={auth(<Importador />)} />
