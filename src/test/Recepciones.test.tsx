@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import Recepciones from '../pages/Recepciones';
@@ -39,7 +39,7 @@ const catalogos: Record<string, unknown[]> = {
   '/api/Catalogos/empresas': [{ id: 1, descripcion: 'Tecomnet' }],
   '/api/Catalogos/unidadesnegocio': [{ id: 1, descripcion: 'Norte', empresaId: 1 }],
   '/api/Productos': [{ id: 4, descripcion: 'Producto A' }],
-  '/api/Catalogos/almacenes': [],
+  '/api/Catalogos/almacenes': [{ id: 3, descripcion: 'Almacén central', empresaId: 1, udnId: 1 }],
 };
 
 function renderRecepciones() {
@@ -149,6 +149,45 @@ describe('Recepciones', () => {
     await screen.findByText('AA-10');
     expect(screen.queryByRole('button', { name: /Nueva recepción/ })).not.toBeInTheDocument();
     expect(screen.queryByTitle('Editar')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Aplicar recepción')).not.toBeInTheDocument();
     expect(screen.getByTitle('Ver detalle')).toBeInTheDocument();
   });
+
+
+  it('aplica una recepción con PUT, estado Aplicado y el almacén elegido', async () => {
+    vi.mocked(sendJSON).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderRecepciones();
+
+    await user.click(await screen.findByTitle('Aplicar recepción'));
+    const modal = screen.getByRole('dialog');
+    expect(within(modal).getByRole('button', { name: 'Aplicar' })).toBeDisabled();
+    await within(modal).findByRole('option', { name: 'Almacén central' });
+    await user.selectOptions(within(modal).getByRole('combobox'), 'Almacén central');
+    await user.click(within(modal).getByRole('button', { name: 'Aplicar' }));
+
+    expect(sendJSON).toHaveBeenCalledWith('PUT', '/api/Recepciones/10', {
+      id: 10,
+      fechaRecepcion: '2026-11-21T12:00:00',
+      referenciaCompra: '1 1 compra/AA-1',
+      estadoId: 6,
+      almacenId: 3,
+      detalles: [{ productoId: 4, cantidad: 20, cantidadPieza: 0 }],
+    });
+    expect(notify).toHaveBeenCalledWith('Recepción aplicada.', 'success');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('una recepción aplicada ya no se puede editar ni aplicar', async () => {
+    vi.mocked(getPaged).mockImplementation((async (url: string) => {
+      const data = url === '/api/Recepciones' ? [{ ...recepcion, estadoId: 6 }] : catalogos[url] ?? [];
+      return { data, totalRecords: data.length, page: 1, pageSize: 10, totalPages: 1 };
+    }) as typeof getPaged);
+    renderRecepciones();
+
+    expect(await screen.findByText('Aplicada')).toBeInTheDocument();
+    expect(screen.queryByTitle('Editar')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Aplicar recepción')).not.toBeInTheDocument();
+  });
+
 });

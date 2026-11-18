@@ -40,7 +40,7 @@ const vacio: FormRecepcion = {
   estadoId: null, almacenId: null, detalles: [renglonVacio],
 };
 const CAMPOS = ['empresaId', 'udnId', 'fechaRecepcion', 'referenciaCompra', 'almacenId', 'detalles'] as const;
-
+const ESTADO_RECEPCION_APLICADA = 6;
 
 export default function Recepciones() {
 const { notify, notifyError } = useUI();
@@ -60,6 +60,11 @@ const [vista, setVista] = useState<'lista' | 'detalle' | 'form'>('lista');
   const [form, setForm] = useState<FormRecepcion>(vacio);
 const [guardando, setGuardando] = useState(false);
 const errores = useErroresForm(CAMPOS);
+
+  // Recepción que se va a aplicar (abre el modal) y el almacén elegido para ella.
+  const [aAplicar, setAAplicar] = useState<Recepcion | null>(null);
+  const [almacenAplicar, setAlmacenAplicar] = useState<number | null>(null);
+  const [aplicando, setAplicando] = useState(false);
 
 
   const filtrar = (ev: React.FormEvent) => {
@@ -144,6 +149,33 @@ const errores = useErroresForm(CAMPOS);
       errores.capturar(err, 'No se pudo guardar la recepción');
     } finally {
       setGuardando(false);
+    }
+  };
+
+  
+  const abrirAplicar = (r: Recepcion) => { setAAplicar(r); setAlmacenAplicar(null); };
+
+  const aplicar = async () => {
+    if (!aAplicar || !almacenAplicar) return;
+    setAplicando(true);
+    try {
+      // Se pide completa para mandar sus renglones tal como están.
+      const r = await getJSON<Recepcion>(`${API}/Recepciones/buscar?id=${aAplicar.id}`);
+      await sendJSON('PUT', `${API}/Recepciones/${r.id}`, {
+        id: r.id,
+        fechaRecepcion: r.fechaRecepcion,
+        referenciaCompra: r.referenciaCompra,
+        estadoId: ESTADO_RECEPCION_APLICADA,
+        almacenId: almacenAplicar,
+        detalles: r.recepcionDet.map((d) => ({ productoId: d.productoId, cantidad: d.cantidad, cantidadPieza: d.cantidadPieza })),
+      } satisfies UpdateRecepcion);
+      notify('Recepción aplicada.', 'success');
+      setAAplicar(null);
+      await listado.recargar();
+    } catch (err) {
+      notifyError(err, 'No se pudo aplicar la recepción');
+    } finally {
+      setAplicando(false);
     }
   };
 
@@ -274,7 +306,14 @@ const errores = useErroresForm(CAMPOS);
                   <td>{r.referenciaCompra}</td><td>{r.recepcionDet.length}</td>
                                     <td className="text-end">
                     <button className="action-btn" title="Ver detalle" onClick={() => verDetalle(r.id)}><i className="bi bi-eye" /></button>
-                    {puedeEscribir && <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(r.id)}><i className="bi bi-pencil" /></button>}
+                    {r.estadoId === ESTADO_RECEPCION_APLICADA
+                      ? <span className="badge rounded-pill bg-success-subtle text-success-emphasis ms-1">Aplicada</span>
+                      : puedeEscribir && (
+                        <>
+                          <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(r.id)}><i className="bi bi-pencil" /></button>
+                          <button className="action-btn text-success" title="Aplicar recepción" onClick={() => abrirAplicar(r)}><i className="bi bi-box-arrow-in-down" /></button>
+                        </>
+                      )}
                   </td>
                 </tr>
               ))}
@@ -289,6 +328,34 @@ const errores = useErroresForm(CAMPOS);
         onPage={listado.irA} onPageSize={listado.cambiarPageSize}
         etiqueta="recepciones"
       />
+      
+      {aAplicar && (
+        <>
+          <div className="modal d-block" role="dialog" aria-modal="true" aria-labelledby="aplicarTitulo">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h2 className="modal-title fs-5" id="aplicarTitulo">Aplicar recepción {aAplicar.serie}-{aAplicar.folio ?? '-'}</h2>
+                </div>
+                <div className="modal-body">
+                  <p>Sus renglones entrarán a Existencias y Kardex del almacén que elijas. Después ya no se podrá editar.</p>
+                  <div className="form-group"><label>Almacén</label>
+                    <SelectCatalogo catalogo="almacenes" value={almacenAplicar} empresaId={aAplicar.empresaId} udnId={aAplicar.udnId} required
+                      onChange={setAlmacenAplicar} />
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setAAplicar(null)} disabled={aplicando}>Cancelar</button>
+                  <button type="button" className="btn btn-tec" onClick={aplicar} disabled={aplicando || !almacenAplicar}>
+                    {aplicando ? 'Aplicando…' : 'Aplicar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="modal-backdrop show" />
+        </>
+      )}
       
       </>
 ) : (
