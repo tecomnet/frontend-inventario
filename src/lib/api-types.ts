@@ -37,6 +37,8 @@ export type UpdateDescripcion = Schemas['UpdateMarcaCommand'];
 export type CreateRecepcion = Schemas['RegistrarRecepcionCommand'];
 export type UpdateRecepcion = Schemas['UpdateRecepcionCommand'];
 export type CreateRecepcionDetalle = Schemas['CreateRecepcionDetalleCommand'];
+export type CreateAjuste = Schemas['RegistrarAjusteCommand'];
+export type CreateAjusteDetalle = Schemas['CreateAjusteDetalleCommand']
 
 // ---------------- Respuestas (generadas) ----------------
 // Fechas: DateTime de .NET, llegan como string ISO.
@@ -66,6 +68,7 @@ export type SimDet = Schemas['SimDetDto'] & {
 };
 export type Existencia = Schemas['ExistenciaDto'];
 export type Recepcion = Schemas['RecepcionDto'];
+export type Ajuste = Schemas['AjusteDto']
 export type TipoTransaccion = Schemas['TipoTransaccionDto'];
 /** Marcas, Presentaciones y Unidades de Medida comparten la misma forma. */
 export type CatalogoDescripcion = Schemas['MarcaDto'];

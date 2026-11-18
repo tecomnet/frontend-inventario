@@ -11,6 +11,7 @@ const URLS = {
   udn: `${API}/Catalogos/unidadesnegocio`,
   almacenes: `${API}/Catalogos/almacenes`,
   productos: `${API}/Productos`,
+  tiposTransaccion: `${API}/Catalogos/tipostransaccion`,
 };
 
 interface Opcion { id: number; descripcion: string; empresaId?: number; udnId?: number }
