@@ -11,6 +11,8 @@ const URLS = {
   udn: `${API}/Catalogos/unidadesnegocio`,
   almacenes: `${API}/Catalogos/almacenes`,
   productos: `${API}/Productos`,
+  proveedores: `${API}/Catalogos/proveedores`,
+  tiposTransaccion: `${API}/Catalogos/tipostransaccion`,
 };
 
 interface Opcion { id: number; descripcion: string; empresaId?: number; udnId?: number }
@@ -24,9 +26,10 @@ interface Props {
   empresaId?: number | null;
   udnId?: number | null;
   disabled?: boolean;
+  id?: string;
 }
 
-export function SelectCatalogo({ catalogo, value, onChange, invalido, required, disabled, empresaId, udnId }: Props) {
+export function SelectCatalogo({ catalogo, value, onChange, invalido, required, disabled, empresaId, udnId, id }: Props) {
   const [texto, setTexto] = useState('');
   const [opciones, setOpciones] = useState<Opcion[]>([]);
   const [total, setTotal] = useState(0);
@@ -58,11 +61,13 @@ export function SelectCatalogo({ catalogo, value, onChange, invalido, required, 
         <input
           type="search"
           placeholder="Buscar…"
+          aria-label="Buscar en el catálogo"
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
         />
       )}
       <select
+        id={id}
         aria-invalid={invalido}
         required={required}
         disabled={disabled}

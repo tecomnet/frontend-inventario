@@ -122,8 +122,8 @@ export default function Productos() {
                       <td>{p.materialDescripcion}</td><td>{p.presentacionDescripcion}</td><td>{p.lineaDescripcion}</td>
                       <td>{p.iva}</td><td>{p.ieps}</td><td>{siNo(p.esActivo)}</td>
                       {puedeEscribir && <td className="text-end">
-                        <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(p)}><i className="bi bi-pencil" /></button>
-                        <button className="action-btn disable" title="Dar de baja" onClick={() => baja(p.id)}><i className="bi bi-slash-circle" /></button>
+                        <button className="action-btn edit" title="Editar" aria-label={`Editar producto ${p.id}`} onClick={() => abrirEdicion(p)}><i className="bi bi-pencil" /></button>
+                        <button className="action-btn disable" title="Dar de baja" aria-label={`Dar de baja producto ${p.id}`} onClick={() => baja(p.id)}><i className="bi bi-slash-circle" /></button>
                       </td>}
                     </tr>
                   ))}
@@ -145,32 +145,32 @@ export default function Productos() {
           <div className="form-card">
             <form onSubmit={guardar} noValidate>
               <div className="entity-grid">
-                <div className="form-group"><label>Código interno</label>
-                  <input aria-invalid={!!errores.de('codInterno')} type="text" value={form.codInterno} onChange={(e) => set('codInterno', e.target.value)} required />
+                                <div className="form-group"><label htmlFor="producto-codInterno">Código interno</label>
+                  <input id="producto-codInterno" aria-invalid={!!errores.de('codInterno')} type="text" value={form.codInterno} onChange={(e) => set('codInterno', e.target.value)} required />
                   <CampoError mensajes={errores.de('codInterno')} /></div>
-                <div className="form-group"><label>Descripción</label>
-                  <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
+                <div className="form-group"><label htmlFor="producto-descripcion">Descripción</label>
+                  <input id="producto-descripcion" aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
                   <CampoError mensajes={errores.de('descripcion')} /></div>
-                                <div className="form-group"><label>Marca</label>
-                  <SelectCatalogo catalogo="marcas" value={form.marcaId} onChange={(id) => set('marcaId', id ?? 0)} invalido={!!errores.de('marcaId')} required />
+                <div className="form-group"><label htmlFor="producto-marca">Marca</label>
+                  <SelectCatalogo id="producto-marca" catalogo="marcas" value={form.marcaId} onChange={(id) => set('marcaId', id ?? 0)} invalido={!!errores.de('marcaId')} required />
                   <CampoError mensajes={errores.de('marcaId')} /></div>
-                <div className="form-group"><label>Línea</label>
-                  <SelectCatalogo catalogo="lineas" value={form.lineaId} onChange={(id) => set('lineaId', id ?? 0)} invalido={!!errores.de('lineaId')} required />
+                <div className="form-group"><label htmlFor="producto-linea">Línea</label>
+                  <SelectCatalogo id="producto-linea" catalogo="lineas" value={form.lineaId} onChange={(id) => set('lineaId', id ?? 0)} invalido={!!errores.de('lineaId')} required />
                   <CampoError mensajes={errores.de('lineaId')} /></div>
-                <div className="form-group"><label>Presentación</label>
-                  <SelectCatalogo catalogo="presentaciones" value={form.presentacionId} onChange={(id) => set('presentacionId', id ?? 0)} invalido={!!errores.de('presentacionId')} required />
+                <div className="form-group"><label htmlFor="producto-presentacion">Presentación</label>
+                  <SelectCatalogo id="producto-presentacion" catalogo="presentaciones" value={form.presentacionId} onChange={(id) => set('presentacionId', id ?? 0)} invalido={!!errores.de('presentacionId')} required />
                   <CampoError mensajes={errores.de('presentacionId')} /></div>
-                <div className="form-group"><label>Unidad de medida</label>
-                  <SelectCatalogo catalogo="unidades" value={form.unidadMedidaId} onChange={(id) => set('unidadMedidaId', id ?? 0)} invalido={!!errores.de('unidadMedidaId')} required />
+                <div className="form-group"><label htmlFor="producto-unidad">Unidad de medida</label>
+                  <SelectCatalogo id="producto-unidad" catalogo="unidades" value={form.unidadMedidaId} onChange={(id) => set('unidadMedidaId', id ?? 0)} invalido={!!errores.de('unidadMedidaId')} required />
                   <CampoError mensajes={errores.de('unidadMedidaId')} /></div>
-                <div className="form-group"><label>Material Id</label>
-                  <input aria-invalid={!!errores.de('materialId')} type="number" min={0} step={1} value={form.materialId ?? 0} onChange={(e) => set('materialId', num(e.target.value))} required />
+                <div className="form-group"><label htmlFor="producto-material">Material Id</label>
+                  <input id="producto-material" aria-invalid={!!errores.de('materialId')} type="number" min={0} step={1} value={form.materialId ?? 0} onChange={(e) => set('materialId', num(e.target.value))} required />
                   <CampoError mensajes={errores.de('materialId')} /></div>
-                <div className="form-group"><label>IVA</label>
-                  <input aria-invalid={!!errores.de('iva')} type="number" min={0} step={0.01} value={form.iva ?? 0} onChange={(e) => set('iva', Number(e.target.value))} required />
+                <div className="form-group"><label htmlFor="producto-iva">IVA</label>
+                  <input id="producto-iva" aria-invalid={!!errores.de('iva')} type="number" min={0} step={0.01} value={form.iva ?? 0} onChange={(e) => set('iva', Number(e.target.value))} required />
                   <CampoError mensajes={errores.de('iva')} /></div>
-                <div className="form-group"><label>IEPS</label>
-                  <input aria-invalid={!!errores.de('ieps')} type="number" min={0} step={0.01} value={form.ieps ?? 0} onChange={(e) => set('ieps', Number(e.target.value))} required />
+                <div className="form-group"><label htmlFor="producto-ieps">IEPS</label>
+                  <input id="producto-ieps" aria-invalid={!!errores.de('ieps')} type="number" min={0} step={0.01} value={form.ieps ?? 0} onChange={(e) => set('ieps', Number(e.target.value))} required />
                   <CampoError mensajes={errores.de('ieps')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActivo ?? true} onChange={(e) => set('esActivo', e.target.checked)} /> Activo</label>
               </div>

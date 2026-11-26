@@ -114,8 +114,8 @@ export default function Sims() {
 
   const dateField = (label: string, k: CampoFecha) => (
     <div className="form-group">
-      <label>{label}</label>
-      <input type="date" aria-invalid={!!errores.de(k)} value={isoToInput(edit?.[k] ?? undefined)} onChange={(e) => setCampo(k, e.target.value)} />
+          <label htmlFor={`sim-${k}`}>{label}</label>
+      <input id={`sim-${k}`} type="date" aria-invalid={!!errores.de(k)} value={isoToInput(edit?.[k] ?? undefined)} onChange={(e) => setCampo(k, e.target.value)} />
       <CampoError mensajes={errores.de(k)} />
     </div>
   );
@@ -147,13 +147,13 @@ export default function Sims() {
         <div className="form-card">
           <div className="entity-form-header">
             <div><span className="eyebrow">Editar</span><h3>SIM {edit.id} · {edit.iccid ?? ''}</h3></div>
-            <button className="action-btn" type="button" onClick={() => setEdit(null)}><i className="bi bi-x-lg" /></button>
-          </div>
+            <button className="action-btn" type="button" aria-label="Cerrar edición" onClick={() => setEdit(null)}><i className="bi bi-x-lg" /></button>  
+            </div>
           <form onSubmit={guardar} noValidate>
             <div className="entity-grid">
               <div className="form-group">
-                <label>Estado Sim</label>
-                <select aria-invalid={!!errores.de('estadoSim')} value={edit.estadoSim || ''} onChange={(e) => setCampo('estadoSim', Number(e.target.value))}>
+                <label htmlFor='sim-estado'>Estado Sim</label>
+                <select id="sim-estado" aria-invalid={!!errores.de('estadoSim')} value={edit.estadoSim || ''} onChange={(e) => setCampo('estadoSim', Number(e.target.value))}>
                   {Object.entries(ESTADOS_SIM).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
                 </select>
                 <CampoError mensajes={errores.de('estadoSim')} />
@@ -192,7 +192,7 @@ export default function Sims() {
             {estado === 'ok' && items.length === 0 && <tr><td colSpan={19} className="text-center text-muted py-4">Sin registros.</td></tr>}
             {estado === 'ok' && items.map((p) => (
               <tr key={p.id}>
-                {puedeEscribir && <td><button className="action-btn edit" title="Editar" onClick={() => setEdit(p)}><i className="bi bi-pencil" /></button></td>}
+                {puedeEscribir && <td><button className="action-btn edit" title="Editar" aria-label={`Editar SIM ${p.iccid ?? p.id}`} onClick={() => setEdit(p)}><i className="bi bi-pencil" /></button></td>}
                 <td>{p.id}</td><td>{p.imsi}</td><td>{p.iccid}</td><td>{p.msisdn}</td><td>{p.idProducto}</td>
                 <td>{p.productoDescripcion}</td><td>{p.loteTecomnet}</td><td>{p.loteALtan}</td><td>{fecha(p.fechaRegistro)}</td>
                 <td>{ESTADOS_SIM[estadoNum(p.estadoSim) as EstadoSim] ?? p.estadoSim}</td>

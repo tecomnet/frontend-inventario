@@ -165,25 +165,25 @@ const errores = useErroresForm(CAMPOS);
           <div className="form-card mb-4">
             <h2 className="fs-6 fw-bold mb-3">Datos de la recepción</h2>
             <div className="row g-3">
-              <div className="col-md-6 form-group"><label>Empresa</label>
-                <SelectCatalogo catalogo="empresas" value={form.empresaId} disabled={form.id > 0} invalido={!!errores.de('empresaId')} required
+              <div className="col-md-6 form-group"><label htmlFor="recepcion-empresa">Empresa</label>
+                <SelectCatalogo id="recepcion-empresa" catalogo="empresas" value={form.empresaId} disabled={form.id > 0} invalido={!!errores.de('empresaId')} required
                   onChange={(id) => { set('empresaId', id); set('udnId', null); }} />
                 <CampoError mensajes={errores.de('empresaId')} /></div>
-              <div className="col-md-6 form-group"><label>UDN</label>
-                <SelectCatalogo catalogo="udn" value={form.udnId} empresaId={form.empresaId} disabled={form.id > 0} invalido={!!errores.de('udnId')} required
+              <div className="col-md-6 form-group"><label htmlFor="recepcion-udn">UDN</label>
+                <SelectCatalogo id="recepcion-udn" catalogo="udn" value={form.udnId} empresaId={form.empresaId} disabled={form.id > 0} invalido={!!errores.de('udnId')} required
                   onChange={(id) => set('udnId', id)} />
                 <CampoError mensajes={errores.de('udnId')} /></div>
-              <div className="col-md-6 form-group"><label>Fecha de recepción</label>
-                <input type="date" aria-invalid={!!errores.de('fechaRecepcion')} value={form.fechaRecepcion}
+              <div className="col-md-6 form-group"><label htmlFor="recepcion-fecha">Fecha de recepción</label>
+                <input id="recepcion-fecha" type="date" aria-invalid={!!errores.de('fechaRecepcion')} value={form.fechaRecepcion}
                   onChange={(e) => set('fechaRecepcion', e.target.value)} />
                 <CampoError mensajes={errores.de('fechaRecepcion')} /></div>
-              <div className="col-md-6 form-group"><label>Referencia de compra</label>
-                <input type="text" aria-invalid={!!errores.de('referenciaCompra')} value={form.referenciaCompra}
+              <div className="col-md-6 form-group"><label htmlFor="recepcion-referencia">Referencia de compra</label>
+                <input id="recepcion-referencia" type="text" aria-invalid={!!errores.de('referenciaCompra')} value={form.referenciaCompra}
                   onChange={(e) => set('referenciaCompra', e.target.value)} />
                 <CampoError mensajes={errores.de('referenciaCompra')} /></div>
               {form.id > 0 && (
-                <div className="col-md-6 form-group"><label>Almacén</label>
-                  <SelectCatalogo catalogo="almacenes" value={form.almacenId} empresaId={form.empresaId} udnId={form.udnId} invalido={!!errores.de('almacenId')}
+                <div className="col-md-6 form-group"><label htmlFor="recepcion-almacen">Almacén</label>
+                  <SelectCatalogo id="recepcion-almacen" catalogo="almacenes" value={form.almacenId} empresaId={form.empresaId} udnId={form.udnId} invalido={!!errores.de('almacenId')}
                     onChange={(id) => set('almacenId', id)} />
                   <CampoError mensajes={errores.de('almacenId')} /></div>
               )}
@@ -215,7 +215,7 @@ const errores = useErroresForm(CAMPOS);
                       <td className="form-group"><input type="number" min={0} step={1} aria-label="Piezas" className="text-end" value={r.cantidadPieza}
                         onChange={(e) => cambiarRenglon(i, { cantidadPieza: Number(e.target.value) || 0 })} /></td>
                       <td className="text-end">
-                        <button type="button" className="action-btn disable" title="Quitar renglón" onClick={() => quitarRenglon(i)}><i className="bi bi-trash" /></button>
+                        <button type="button" className="action-btn disable" title="Quitar renglón" aria-label={`Quitar renglón ${i + 1}`} onClick={() => quitarRenglon(i)}><i className="bi bi-trash" /></button>
                       </td>
                     </tr>
                   ))}
@@ -240,13 +240,13 @@ const errores = useErroresForm(CAMPOS);
 
       <form className="filter-panel" onSubmit={filtrar}>
         <div className="form-group">
-          <label>Empresa</label>
-          <SelectCatalogo catalogo="empresas" value={empresaId}
+          <label htmlFor="recepciones-filtro-empresa">Empresa</label>
+          <SelectCatalogo id="recepciones-filtro-empresa" catalogo="empresas" value={empresaId}
             onChange={(id) => { setEmpresaId(id); setUdnId(null); }} />
         </div>
         <div className="form-group">
-          <label>UDN</label>
-          <SelectCatalogo catalogo="udn" value={udnId} empresaId={empresaId} onChange={setUdnId} />
+          <label htmlFor="recepciones-filtro-udn">UDN</label>
+          <SelectCatalogo id="recepciones-filtro-udn" catalogo="udn" value={udnId} empresaId={empresaId} onChange={setUdnId} />
         </div>
         <button className="btn btn-tec" type="submit"><i className="bi bi-funnel" /> Filtrar</button>
       </form>
@@ -273,8 +273,8 @@ const errores = useErroresForm(CAMPOS);
                   <td>{nombreDe(empresas, r.empresaId)}</td><td>{nombreDe(udns, r.udnId)}</td>
                   <td>{r.referenciaCompra}</td><td>{r.recepcionDet.length}</td>
                                     <td className="text-end">
-                    <button className="action-btn" title="Ver detalle" onClick={() => verDetalle(r.id)}><i className="bi bi-eye" /></button>
-                    {puedeEscribir && <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(r.id)}><i className="bi bi-pencil" /></button>}
+                    <button className="action-btn" title="Ver detalle" aria-label={`Ver detalle de la recepción ${r.id}`} onClick={() => verDetalle(r.id)}><i className="bi bi-eye" /></button>
+                    {puedeEscribir && <button className="action-btn edit" title="Editar" aria-label={`Editar recepción ${r.id}`} onClick={() => abrirEdicion(r.id)}><i className="bi bi-pencil" /></button>}
                   </td>
                 </tr>
               ))}

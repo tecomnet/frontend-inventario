@@ -36,6 +36,7 @@ const NAV: NavItem[] = [
   {
     group: 'Inventarios', icon: 'bi-list-check', items: [
       { key: 'movimientos', to: '/movimientos', icon: 'bi-arrow-left-right', label: 'Movimientos de Almacén' },
+      {key: 'ajustes', to:'/ajustes', icon: 'bi-sliders', label:'Ajustes de inventario'},
       { key: 'existencias', to: '/existencias', icon: 'bi-stack', label: 'Existencias (listado)' },
       { key: 'buscar-existencias', to: '/buscar-existencias', icon: 'bi-search', label: 'Buscar Existencias' },
     ],
@@ -95,20 +96,20 @@ export default function AppLayout({ active, children }: Props) {
   return (
     <div className={`layout${collapsed ? ' collapsed' : ''}`} id="layout">
       <aside className="sidebar">
-        <div className="brand" aria-label="Inventario" />
+        <div className="brand" role="img" aria-label="Inventario" />
         <nav className="nav flex-column">
           {nav.map((n) =>
             'group' in n ? (
               <div key={n.group}>
-                <a
-                  className="nav-link"
-                  href="#"
-                  role="button"
-                  onClick={(e) => { e.preventDefault(); toggleGroup(n.group); }}
+                <button
+                type="button"
+                className='nav-link'
+                aria-expanded={!!open[n.group]}
+                onClick={() => toggleGroup(n.group)}
                 >
                   <i className={`bi ${n.icon}`} /> {n.group}
                   <i className={`bi ${open[n.group] ? 'bi-chevron-down' : 'bi-chevron-right'} ms-auto small`} />
-                </a>
+                </button>
                 {open[n.group] && n.items.map((i) => (
                   <NavLink
                     key={i.key}
@@ -131,13 +132,9 @@ export default function AppLayout({ active, children }: Props) {
           )}
         </nav>
         <div className="sidebar-footer">
-          <a
-            className="nav-link salir"
-            href="#"
-            onClick={(e) => { e.preventDefault(); logout(); }}
-          >
+          <button type="button" className='nav-link salir' onClick={() => logout()}>
             <i className="bi bi-box-arrow-left" /> Salir
-          </a>
+          </button>
         </div>
       </aside>
 
@@ -150,7 +147,7 @@ export default function AppLayout({ active, children }: Props) {
         <i className={`bi ${collapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`} />
       </button>
 
-      <div className="main">
+      <main className="main">
         <header className="topbar">
           <div className="usuario-sesion" title="Usuario y rol de la sesión">
             <i className="bi bi-person-circle" />
@@ -159,7 +156,7 @@ export default function AppLayout({ active, children }: Props) {
           </div>
         </header>
         <div className="content">{children}</div>
-      </div>
+      </main>
     </div>
   );
 }

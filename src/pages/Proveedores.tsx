@@ -121,8 +121,8 @@ export default function Proveedores() {
                       <td>{p.id}</td><td>{p.descripcion}</td><td>{p.contacto ?? '-'}</td>
                       <td>{p.diasCredito ?? 0}</td><td>{siNo(p.esActivo)}</td>
                       {puedeEscribir && <td className="text-end">
-                        <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(p)}><i className="bi bi-pencil" /></button>
-                        <button className="action-btn delete" title="Dar de baja" onClick={() => setABorrar(p)}><i className="bi bi-slash-circle" /></button>
+                        <button className="action-btn edit" title="Editar" aria-label={`Editar${p.descripcion}`} onClick={() => abrirEdicion(p)}><i className="bi bi-pencil" /></button>
+                        <button className="action-btn delete" title="Dar de baja" aria-label={`Dar de baja${p.descripcion}`} onClick={() => setABorrar(p)}><i className="bi bi-slash-circle" /></button>
                       </td>}
                     </tr>
                   ))}
@@ -151,14 +151,14 @@ export default function Proveedores() {
           <div className="form-card">
             <form onSubmit={guardar} noValidate>
               <div className="entity-grid">
-                <div className="form-group"><label>Descripción</label>
-                  <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
+                <div className="form-group"><label htmlFor='proveedor-descripcion'>Descripción</label>
+                  <input id="proveedor-descripcion" aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
                   <CampoError mensajes={errores.de('descripcion')} /></div>
-                <div className="form-group"><label>Contacto</label>
-                  <input aria-invalid={!!errores.de('contacto')} type="text" value={form.contacto ?? ''} onChange={(e) => set('contacto', e.target.value)} />
+                <div className="form-group"><label htmlFor='proveedor-contacto'>Contacto</label>
+                  <input id="proveedor-contacto" aria-invalid={!!errores.de('contacto')} type="text" value={form.contacto ?? ''} onChange={(e) => set('contacto', e.target.value)} />
                   <CampoError mensajes={errores.de('contacto')} /></div>
-                <div className="form-group"><label>Días Crédito</label>
-                  <input aria-invalid={!!errores.de('diasCredito')} type="number" min={0} step={1} value={form.diasCredito ?? ''} onChange={(e) => set('diasCredito', e.target.value === '' ? null : num(e.target.value))} />
+                <div className="form-group"><label htmlFor='proveedor-dias'>Días Crédito</label>
+                  <input id="proveedor-dias" aria-invalid={!!errores.de('diasCredito')} type="number" min={0} step={1} value={form.diasCredito ?? ''} onChange={(e) => set('diasCredito', e.target.value === '' ? null : num(e.target.value))} />
                   <CampoError mensajes={errores.de('diasCredito')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActivo ?? true} onChange={(e) => set('esActivo', e.target.checked)} /> Activo</label>
               </div>

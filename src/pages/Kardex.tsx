@@ -48,8 +48,8 @@ export default function Kardex() {
 
       <form className="filter-panel" onSubmit={consultar}>
         <div className="form-group">
-          <label>Tipo de consulta</label>
-          <select value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
+          <label htmlFor='kardex-tipo'>Tipo de consulta</label>
+          <select id="kardex-tipo" value={mode} onChange={(e) => setMode(e.target.value as Mode)}>
             <option value="productoEmpresa">Por empresa y producto</option>
             <option value="empresa">Por empresa</option>
             <option value="completo">Kardex completo</option>
@@ -58,15 +58,15 @@ export default function Kardex() {
         </div>
                 {mode === 'productoEmpresa' && (
           <div className="form-group">
-            <label>Producto</label>
-            <SelectCatalogo catalogo="productos" value={idProducto} required
+            <label htmlFor='kardex-producto'>Producto</label>
+            <SelectCatalogo id="kardex-producto" catalogo="productos" value={idProducto} required
               onChange={setIdProducto} />
           </div>
         )}
         {mode !== 'completo' && (
           <div className="form-group">
-            <label>Empresa</label>
-            <SelectCatalogo catalogo="empresas" value={idEmpresa} required
+            <label htmlFor='kardex-empresa'>Empresa</label>
+            <SelectCatalogo id="kardex-empresa" catalogo="empresas" value={idEmpresa} required
               onChange={setIdEmpresa} />
           </div>
         )}

@@ -118,8 +118,8 @@ export default function Empresas() {
                     <tr key={e.id}>
                       <td>{e.id}</td><td>{e.descripcion}</td><td>{e.rfc}</td><td>{siNo(e.esActiva)}</td>
                       {puedeEscribir && <td className="text-end">
-                        <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(e)}><i className="bi bi-pencil" /></button>
-                        <button className="action-btn delete" title="Dar de baja" onClick={() => setABorrar(e)}><i className="bi bi-slash-circle" /></button>
+                        <button className="action-btn edit" title="Editar" aria-label={`Editar${e.descripcion}`} onClick={() => abrirEdicion(e)}><i className="bi bi-pencil" /></button>
+                        <button className="action-btn delete" title="Dar de baja" aria-label={`Dar de baja${e.descripcion}`} onClick={() => setABorrar(e)}><i className="bi bi-slash-circle" /></button>
                       </td>}
                     </tr>
                   ))}
@@ -148,11 +148,11 @@ export default function Empresas() {
           <div className="form-card">
             <form onSubmit={guardar} noValidate>
               <div className="entity-grid">
-                <div className="form-group"><label>Descripción</label>
-                  <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
+                <div className="form-group"><label htmlFor='empresa-descripcion'>Descripción</label>
+                  <input id="empresa-descripcion" aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
                   <CampoError mensajes={errores.de('descripcion')} /></div>
-                <div className="form-group"><label>RFC</label>
-                  <input aria-invalid={!!errores.de('rfc')} type="text" value={form.rfc} onChange={(e) => set('rfc', e.target.value)} required />
+                <div className="form-group"><label htmlFor='empresa-rfc'>RFC</label>
+                  <input id="empresa-rfc" aria-invalid={!!errores.de('rfc')} type="text" value={form.rfc} onChange={(e) => set('rfc', e.target.value)} required />
                   <CampoError mensajes={errores.de('rfc')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActiva ?? true} onChange={(e) => set('esActiva', e.target.checked)} /> Activa</label>
               </div>

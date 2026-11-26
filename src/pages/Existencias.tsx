@@ -36,12 +36,12 @@ export default function Existencias() {
       </div>
             <form className="filter-panel" onSubmit={filtrar}>
         <div className="form-group">
-          <label>Almacén</label>
-          <SelectCatalogo catalogo="almacenes" value={idAlmacen} onChange={setIdAlmacen} />
+          <label htmlFor="existencias-almacen">Almacén</label>
+          <SelectCatalogo id="existencias-almacen" catalogo="almacenes" value={idAlmacen} onChange={setIdAlmacen} />
         </div>
         <div className="form-group">
-          <label>Producto</label>
-          <SelectCatalogo catalogo="productos" value={idProducto} onChange={setIdProducto} />
+          <label htmlFor="existencias-producto">Producto</label>
+          <SelectCatalogo id="existencias-producto" catalogo="productos" value={idProducto} onChange={setIdProducto} />
         </div>
         <button className="btn btn-tec" type="submit"><i className="bi bi-funnel" /> Filtrar</button>
       </form>

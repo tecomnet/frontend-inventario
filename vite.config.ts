@@ -20,6 +20,18 @@ export default defineConfig({
   // Recargas aquí también hay BFF, que se prueba aparte en Node.
   test: {
     globals: true,
+    coverage:{
+      provider: 'v8',
+      include: ['src/lib/**', 'src/components/**'],
+      exclude: ['src/lib/api-schema.d.ts'],
+      reporter: ['text', 'html'],
+      thresholds:{
+        'src/lib/**': {lines: 60},
+        'src/components/**': {lines: 60},
+      },
+    },
+    testTimeout: 15000,
+    
     projects: [
       {
         extends: true,

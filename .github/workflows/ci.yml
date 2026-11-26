@@ -44,8 +44,8 @@ jobs:
       - name: Tipos
         run: npx tsc -b
 
-      - name: Pruebas
-        run: npx vitest run
+      - name: Pruebas y cobertura
+        run: npx vitest run --coverage
 
       # El build va al final y con su propio paso: un error que solo aparece al
       # compilar (una importación rota, por ejemplo) no debe llegar a Amplify.
