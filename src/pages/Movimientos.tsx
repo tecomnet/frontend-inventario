@@ -162,22 +162,22 @@ export default function Movimientos() {
 
       <form className="filter-panel" onSubmit={consultar}>
                 <div className="form-group">
-          <label>Empresa</label>
-          <SelectCatalogo catalogo="empresas" value={empresaId} required
+          <label htmlFor="movimientos-filtro-empresa">Empresa</label>
+          <SelectCatalogo id="movimientos-filtro-empresa" catalogo="empresas" value={empresaId} required
             onChange={(id) => { setEmpresaId(id); setUdnId(null); }} />
         </div>
         <div className="form-group">
-          <label>UDN</label>
-          <SelectCatalogo catalogo="udn" value={udnId} empresaId={empresaId} required
+          <label htmlFor="movimientos-filtro-udn">UDN</label>
+          <SelectCatalogo id="movimientos-filtro-udn" catalogo="udn" value={udnId} empresaId={empresaId} required
             onChange={setUdnId} />
         </div>
         <div className="form-group">
-          <label>Fecha desde</label>
-          <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
+          <label htmlFor="movimientos-filtro-desde">Fecha desde</label>
+          <input id="movimientos-filtro-desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
         </div>
         <div className="form-group">
-          <label>Fecha hasta</label>
-          <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+          <label htmlFor="movimientos-filtro-hasta">Fecha hasta</label>
+          <input id="movimientos-filtro-hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
         </div>
         <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Consultar</button>
       </form>
@@ -208,8 +208,8 @@ export default function Movimientos() {
                           <td>{nombreDe(almacenes, m.almacenId)}</td><td>{nombreDe(tipos, m.tipoTransaccionId)}</td>
                           <td>{m.referencia || '-'}</td><td>{m.movimientoDet.length}</td>
                           <td className="text-end">
-                            <button className="action-btn" title="Ver detalle" onClick={() => verDetalle(m)}><i className="bi bi-eye" /></button>
-                            {puedeEscribir && <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(m)}><i className="bi bi-pencil" /></button>}
+                            <button className="action-btn" title="Ver detalle" aria-label={`Ver detalle del movimiento ${m.id}`} onClick={() => verDetalle(m)}><i className="bi bi-eye" /></button>
+                            {puedeEscribir && <button className="action-btn edit" title="Editar" aria-label={`Editar movimiento ${m.id}`} onClick={() => abrirEdicion(m)}><i className="bi bi-pencil" /></button>}
                           </td>
                         </tr>
                       ))}
@@ -290,12 +290,12 @@ export default function Movimientos() {
             <div className="form-card mb-4">
               <h2 className="fs-6 fw-bold mb-3">Datos del movimiento</h2>
               <div className="row g-3">
-                <div className="col-md-6 form-group"><label>Referencia</label>
-                  <input type="text" aria-invalid={!!errores.de('referencia')} value={form.referencia}
+                <div className="col-md-6 form-group"><label htmlFor="movimiento-referencia">Referencia</label>
+                  <input id="movimiento-referencia" type="text" aria-invalid={!!errores.de('referencia')} value={form.referencia}
                     onChange={(e) => set('referencia', e.target.value)} />
                   <CampoError mensajes={errores.de('referencia')} /></div>
-                <div className="col-md-6 form-group"><label>Observaciones</label>
-                  <input type="text" aria-invalid={!!errores.de('observaciones')} value={form.observaciones}
+                <div className="col-md-6 form-group"><label htmlFor="movimiento-observaciones">Observaciones</label>
+                  <input id="movimiento-observaciones" type="text" aria-invalid={!!errores.de('observaciones')} value={form.observaciones}
                     onChange={(e) => set('observaciones', e.target.value)} />
                   <CampoError mensajes={errores.de('observaciones')} /></div>
               </div>
@@ -305,24 +305,24 @@ export default function Movimientos() {
               <div className="form-card mb-4">
                 <h2 className="fs-6 fw-bold mb-3">Datos del movimiento</h2>
                 <div className="row g-3">
-                  <div className="col-md-6 form-group"><label>Empresa</label>
-                    <SelectCatalogo catalogo="empresas" value={form.empresaId} invalido={!!errores.de('empresaId')} required
+                  <div className="col-md-6 form-group"><label htmlFor="movimiento-empresa">Empresa</label>
+                    <SelectCatalogo id="movimiento-empresa" catalogo="empresas" value={form.empresaId} invalido={!!errores.de('empresaId')} required
                       onChange={(id) => { set('empresaId', id); set('udnId', null); set('almacenId', null); }} />
                     <CampoError mensajes={errores.de('empresaId')} /></div>
-                  <div className="col-md-6 form-group"><label>UDN</label>
-                    <SelectCatalogo catalogo="udn" value={form.udnId} empresaId={form.empresaId} invalido={!!errores.de('udnId')} required
+                  <div className="col-md-6 form-group"><label htmlFor="movimiento-udn">UDN</label>
+                    <SelectCatalogo id="movimiento-udn" catalogo="udn" value={form.udnId} empresaId={form.empresaId} invalido={!!errores.de('udnId')} required
                       onChange={(id) => { set('udnId', id); set('almacenId', null); }} />
                     <CampoError mensajes={errores.de('udnId')} /></div>
-                  <div className="col-md-6 form-group"><label>Almacén</label>
-                    <SelectCatalogo catalogo="almacenes" value={form.almacenId} empresaId={form.empresaId} udnId={form.udnId} invalido={!!errores.de('almacenId')} required
+                  <div className="col-md-6 form-group"><label htmlFor="movimiento-almacen">Almacén</label>
+                    <SelectCatalogo id="movimiento-almacen" catalogo="almacenes" value={form.almacenId} empresaId={form.empresaId} udnId={form.udnId} invalido={!!errores.de('almacenId')} required
                       onChange={(id) => set('almacenId', id)} />
                     <CampoError mensajes={errores.de('almacenId')} /></div>
-                  <div className="col-md-6 form-group"><label>Tipo de transacción</label>
-                    <SelectCatalogo catalogo="tiposTransaccion" value={form.tipoTransaccionId} invalido={!!errores.de('tipoTransaccionId')} required
+                  <div className="col-md-6 form-group"><label htmlFor="movimiento-tipo">Tipo de transacción</label>
+                    <SelectCatalogo id="movimiento-tipo" catalogo="tiposTransaccion" value={form.tipoTransaccionId} invalido={!!errores.de('tipoTransaccionId')} required
                       onChange={(id) => set('tipoTransaccionId', id)} />
                     <CampoError mensajes={errores.de('tipoTransaccionId')} /></div>
-                  <div className="col-12 form-group"><label>Observaciones</label>
-                    <input type="text" aria-invalid={!!errores.de('observaciones')} value={form.observaciones}
+                  <div className="col-12 form-group"><label htmlFor="movimiento-observaciones">Observaciones</label>
+                    <input id="movimiento-observaciones" type="text" aria-invalid={!!errores.de('observaciones')} value={form.observaciones}
                       onChange={(e) => set('observaciones', e.target.value)} />
                     <CampoError mensajes={errores.de('observaciones')} /></div>
                 </div>
@@ -359,7 +359,7 @@ export default function Movimientos() {
                           <td className="form-group"><input type="text" aria-label="Lote Tecomnet" value={r.loteTecomnet}
                             onChange={(e) => cambiarRenglon(i, { loteTecomnet: e.target.value })} /></td>
                           <td className="text-end">
-                            <button type="button" className="action-btn disable" title="Quitar renglón" onClick={() => quitarRenglon(i)}><i className="bi bi-trash" /></button>
+                            <button type="button" className="action-btn disable" title="Quitar renglón" aria-label={`Quitar renglón ${i + 1}`} onClick={() => quitarRenglon(i)}><i className="bi bi-trash" /></button>
                           </td>
                         </tr>
                       ))}

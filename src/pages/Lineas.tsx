@@ -121,8 +121,8 @@ export default function Lineas() {
                     <tr key={l.id}>
                       <td>{l.id}</td><td>{l.descripcion}</td><td>{l.idLineaPadre ?? '-'}</td><td>{siNo(l.esActiva)}</td>
                       {puedeEscribir && <td className="text-end">
-                        <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(l)}><i className="bi bi-pencil" /></button>
-                        <button className="action-btn delete" title="Dar de baja" onClick={() => setABorrar(l)}><i className="bi bi-slash-circle" /></button>
+                        <button className="action-btn edit" title="Editar" aria-label={`Editar${l.descripcion}`} onClick={() => abrirEdicion(l)}><i className="bi bi-pencil" /></button>
+                        <button className="action-btn delete" title="Dar de baja" aria-label={`Dar de baja${l.descripcion}`} onClick={() => setABorrar(l)}><i className="bi bi-slash-circle" /></button>
                       </td>}
                     </tr>
                   ))}
@@ -150,11 +150,11 @@ export default function Lineas() {
           <div className="form-card">
             <form onSubmit={guardar} noValidate>
               <div className="entity-grid">
-                <div className="form-group"><label>Descripción</label>
-                  <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
+                <div className="form-group"><label htmlFor='linea-descripcion'>Descripción</label>
+                  <input id="linea-descripcion" aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
                   <CampoError mensajes={errores.de('descripcion')} /></div>
-                <div className="form-group"><label>Id Línea Padre <small>(0 si es raíz)</small></label>
-                  <input aria-invalid={!!errores.de('idLineaPadre')} type="number" min={0} step={1} value={form.idLineaPadre} onChange={(e) => set('idLineaPadre', num(e.target.value))} />
+                <div className="form-group"><label htmlFor='linea-padre'>Id Línea Padre <small>(0 si es raíz)</small></label>
+                  <input id="linea-padre" aria-invalid={!!errores.de('idLineaPadre')} type="number" min={0} step={1} value={form.idLineaPadre} onChange={(e) => set('idLineaPadre', num(e.target.value))} />
                   <CampoError mensajes={errores.de('idLineaPadre')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActiva} onChange={(e) => set('esActiva', e.target.checked)} /> Activa</label>
               </div>

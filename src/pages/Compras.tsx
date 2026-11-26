@@ -233,8 +233,9 @@ export default function Compras() {
 
           <form className="filter-panel" onSubmit={consultar}>
             <div className="form-group">
-              <label>Empresa</label>
+              <label htmlFor='compras-filtro-empresa'>Empresa</label>
               <SelectCatalogo
+                id="compras-filtro-empresa"
                 catalogo="empresas"
                 value={empresaId}
                 required
@@ -245,8 +246,9 @@ export default function Compras() {
               />
             </div>
             <div className="form-group">
-              <label>UDN</label>
+              <label htmlFor="compras-filtro-udn">UDN</label>
               <SelectCatalogo
+                id="compras-filtro-udn"
                 catalogo="udn"
                 value={udnId}
                 empresaId={empresaId}
@@ -313,11 +315,11 @@ export default function Compras() {
                         <td>{c.folioProveedor || '-'}</td>
                         <td>{c.compraDet.length}</td>
                                                 <td className="text-end">
-                          <button className="action-btn" title="Ver detalle" onClick={() => verDetalle(c.id)}>
+                          <button className="action-btn" title="Ver detalle" aria-label={`Ver detalle de la compra ${c.id}`} onClick={() => verDetalle(c.id)}>
                             <i className="bi bi-eye" />
                           </button>
                           {puedeEscribir && (
-                            <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(c.id)}>
+                            <button className="action-btn edit" title="Editar" aria-label={`Editar compra ${c.id}`} onClick={() => abrirEdicion(c.id)}>
                               <i className="bi bi-pencil" />
                             </button>
                           )}
@@ -454,8 +456,9 @@ export default function Compras() {
             <h2 className="fs-6 fw-bold mb-3">Datos de la compra</h2>
             <div className="row g-3">
               <div className="col-md-6 form-group">
-                <label>Empresa</label>
+                <label htmlFor='compra-empresa'>Empresa</label>
                 <SelectCatalogo
+                  id="compra-empresa"
                   catalogo="empresas"
                   value={form.empresaId}
                   disabled={form.id > 0}
@@ -469,8 +472,9 @@ export default function Compras() {
                 <CampoError mensajes={errores.de('empresaId')} />
               </div>
               <div className="col-md-6 form-group">
-                <label>UDN</label>
+                <label htmlFor='compra-udn'>UDN</label>
                 <SelectCatalogo
+                  id="compra-udn"
                   catalogo="udn"
                   value={form.udnId}
                   empresaId={form.empresaId}
@@ -482,8 +486,9 @@ export default function Compras() {
                 <CampoError mensajes={errores.de('udnId')} />
               </div>
               <div className="col-md-6 form-group">
-                <label>Proveedor</label>
+                <label htmlFor='compra-proveedor'>Proveedor</label>
                 <SelectCatalogo
+                  id="compra-proveedor"
                   catalogo="proveedores"
                   value={form.proveedorId}
                   invalido={!!errores.de('proveedorId')}
@@ -493,8 +498,9 @@ export default function Compras() {
                 <CampoError mensajes={errores.de('proveedorId')} />
               </div>
               <div className="col-md-6 form-group">
-                <label>Folio proveedor</label>
+                <label htmlFor='compra-folio'>Folio proveedor</label>
                 <input
+                  id="compra-folio"
                   type="text"
                   aria-invalid={!!errores.de('folioProveedor')}
                   value={form.folioProveedor}
@@ -503,8 +509,9 @@ export default function Compras() {
                 <CampoError mensajes={errores.de('folioProveedor')} />
               </div>
               <div className="col-md-6 form-group">
-                <label>Fecha de compra</label>
+                <label htmlFor='compra-fecha-compra'>Fecha de compra</label>
                 <input
+                  id="compra-fecha-compra"
                   type="date"
                   aria-invalid={!!errores.de('fechaCompra')}
                   value={form.fechaCompra}
@@ -513,8 +520,9 @@ export default function Compras() {
                 <CampoError mensajes={errores.de('fechaCompra')} />
               </div>
               <div className="col-md-6 form-group">
-                <label>Fecha de pago</label>
+                <label htmlFor='compra-fecha-pago'>Fecha de pago</label>
                 <input
+                  id="compra-fecha-pago"
                   type="date"
                   aria-invalid={!!errores.de('fechaPago')}
                   value={form.fechaPago}
@@ -523,8 +531,9 @@ export default function Compras() {
                 <CampoError mensajes={errores.de('fechaPago')} />
               </div>
               <div className="col-md-6 form-group">
-                <label>UUID factura</label>
+                <label htmlFor='compra-uuid'>UUID factura</label>
                 <input
+                  id="compra-uuid"
                   type="text"
                   aria-invalid={!!errores.de('uudI_Factura')}
                   value={form.uudI_Factura}
@@ -533,8 +542,9 @@ export default function Compras() {
                 <CampoError mensajes={errores.de('uudI_Factura')} />
               </div>
               <div className="col-md-6 form-group">
-                <label>Banco</label>
+                <label htmlFor='compra-banco'>Banco</label>
                 <input
+                id="compra-banco"
                   type="text"
                   aria-invalid={!!errores.de('banco')}
                   value={form.banco}
@@ -543,8 +553,9 @@ export default function Compras() {
                 <CampoError mensajes={errores.de('banco')} />
               </div>
               <div className="col-md-6 form-group">
-                <label>Referencia de pago</label>
+                <label htmlFor='compra-referencia-pago'>Referencia de pago</label>
                 <input
+                id="compra-referencia-pago"
                   type="text"
                   aria-invalid={!!errores.de('referenciaPago')}
                   value={form.referenciaPago}
@@ -553,8 +564,9 @@ export default function Compras() {
                 <CampoError mensajes={errores.de('referenciaPago')} />
               </div>
               <div className="col-md-6 form-group">
-                <label>Observaciones</label>
+                <label htmlFor='compra-observaciones'>Observaciones</label>
                 <input
+                id="compra-observaciones"
                   type="text"
                   aria-invalid={!!errores.de('observaciones')}
                   value={form.observaciones}
@@ -663,6 +675,7 @@ export default function Compras() {
                           type="button"
                           className="action-btn disable"
                           title="Quitar renglón"
+                          aria-label={`Quitar renglón ${i + 1}`}
                           onClick={() => quitarRenglon(i)}
                         >
                           <i className="bi bi-trash" />

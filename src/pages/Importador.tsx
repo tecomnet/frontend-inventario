@@ -76,14 +76,14 @@ export default function Importador() {
         </div>
 
         <div className="form-grid">
-          <div className="form-group"><label>Material</label>
-            <input type="number" value={material} onChange={(e) => setMaterial(e.target.value)} /></div>
-          <div className="form-group"><label>Tipo</label>
-            <input type="number" value={tipo} onChange={(e) => setTipo(e.target.value)} /></div>
-          <div className="form-group"><label>Lote</label>
-            <input type="text" value={lote} onChange={(e) => setLote(e.target.value)} /></div>
-          <div className="form-group"><label>Fecha de compra</label>
-            <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></div>
+          <div className="form-group"><label htmlFor="importador-material">Material</label>
+            <input id="importador-material" type="number" value={material} onChange={(e) => setMaterial(e.target.value)} /></div>
+          <div className="form-group"><label htmlFor="importador-tipo">Tipo</label>
+            <input id="importador-tipo" type="number" value={tipo} onChange={(e) => setTipo(e.target.value)} /></div>
+          <div className="form-group"><label htmlFor="importador-lote">Lote</label>
+            <input id="importador-lote" type="text" value={lote} onChange={(e) => setLote(e.target.value)} /></div>
+          <div className="form-group"><label htmlFor="importador-fecha">Fecha de compra</label>
+            <input id="importador-fecha" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></div>
         </div>
 
         <button className="btn btn-tec" onClick={importar} disabled={enviando}>

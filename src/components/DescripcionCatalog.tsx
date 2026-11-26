@@ -127,10 +127,10 @@ export default function DescripcionCatalog({ active, titulo, singular, url }: Pr
                       <td>{c.descripcion}</td>
                       {puedeEscribir && (
                         <td className="text-end">
-                          <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(c)}>
+                          <button className="action-btn edit" title="Editar" aria-label={`Editar ${c.descripcion}`} onClick={() => abrirEdicion(c)}>
                             <i className="bi bi-pencil" />
                           </button>
-                                                    <button className="action-btn delete" title="Dar de baja" onClick={() => setABorrar(c)}>
+                          <button className="action-btn delete" title="Dar de baja" aria-label={`Dar de baja ${c.descripcion}`} onClick={() => setABorrar(c)}>
                             <i className="bi bi-slash-circle" />
                           </button>
                         </td>

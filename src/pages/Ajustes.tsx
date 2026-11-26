@@ -110,24 +110,24 @@ export default function Ajustes() {
           <div className="form-card mb-4">
             <h2 className="fs-6 fw-bold mb-3">Datos del ajuste</h2>
             <div className="row g-3">
-              <div className="col-md-6 form-group"><label>Empresa</label>
-                <SelectCatalogo catalogo="empresas" value={form.empresaId} invalido={!!errores.de('empresaId')} required
+              <div className="col-md-6 form-group"><label htmlFor="ajuste-empresa">Empresa</label>
+                <SelectCatalogo id="ajuste-empresa" catalogo="empresas" value={form.empresaId} invalido={!!errores.de('empresaId')} required
                   onChange={(id) => { set('empresaId', id); set('udnId', null); set('almacenId', null); }} />
                 <CampoError mensajes={errores.de('empresaId')} /></div>
-              <div className="col-md-6 form-group"><label>UDN</label>
-                <SelectCatalogo catalogo="udn" value={form.udnId} empresaId={form.empresaId} invalido={!!errores.de('udnId')} required
+              <div className="col-md-6 form-group"><label htmlFor="ajuste-udn">UDN</label>
+                <SelectCatalogo id="ajuste-udn" catalogo="udn" value={form.udnId} empresaId={form.empresaId} invalido={!!errores.de('udnId')} required
                   onChange={(id) => { set('udnId', id); set('almacenId', null); }} />
                 <CampoError mensajes={errores.de('udnId')} /></div>
-              <div className="col-md-6 form-group"><label>Almacén</label>
-                <SelectCatalogo catalogo="almacenes" value={form.almacenId} empresaId={form.empresaId} udnId={form.udnId} invalido={!!errores.de('almacenId')} required
+              <div className="col-md-6 form-group"><label htmlFor="ajuste-almacen">Almacén</label>
+                <SelectCatalogo id="ajuste-almacen" catalogo="almacenes" value={form.almacenId} empresaId={form.empresaId} udnId={form.udnId} invalido={!!errores.de('almacenId')} required
                   onChange={(id) => set('almacenId', id)} />
                 <CampoError mensajes={errores.de('almacenId')} /></div>
-              <div className="col-md-6 form-group"><label>Tipo de transacción</label>
-                <SelectCatalogo catalogo="tiposTransaccion" value={form.tipoTransaccionId} invalido={!!errores.de('tipoTransaccionId')} required
+              <div className="col-md-6 form-group"><label htmlFor="ajuste-tipo">Tipo de transacción</label>
+                <SelectCatalogo id="ajuste-tipo" catalogo="tiposTransaccion" value={form.tipoTransaccionId} invalido={!!errores.de('tipoTransaccionId')} required
                   onChange={(id) => set('tipoTransaccionId', id)} />
                 <CampoError mensajes={errores.de('tipoTransaccionId')} /></div>
-              <div className="col-12 form-group"><label>Observaciones</label>
-                <input type="text" aria-invalid={!!errores.de('observaciones')} value={form.observaciones}
+              <div className="col-12 form-group"><label htmlFor="ajuste-observaciones">Observaciones</label>
+                <input id="ajuste-observaciones" type="text" aria-invalid={!!errores.de('observaciones')} value={form.observaciones}
                   onChange={(e) => set('observaciones', e.target.value)} />
                 <CampoError mensajes={errores.de('observaciones')} /></div>
             </div>
@@ -160,7 +160,7 @@ export default function Ajustes() {
                       <td className="form-group"><input type="number" min={0} step={0.01} aria-label="Costo" className="text-end" value={r.costo}
                         onChange={(e) => cambiarRenglon(i, { costo: Number(e.target.value) || 0 })} /></td>
                       <td className="text-end">
-                        <button type="button" className="action-btn disable" title="Quitar renglón" onClick={() => quitarRenglon(i)}><i className="bi bi-trash" /></button>
+                        <button type="button" className="action-btn disable" title="Quitar renglón" aria-label={`Quitar renglón ${i + 1}`} onClick={() => quitarRenglon(i)}><i className="bi bi-trash" /></button>
                       </td>
                     </tr>
                   ))}

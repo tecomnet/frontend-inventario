@@ -105,8 +105,8 @@ export default function UnidadesNegocio() {
                       <tr key={id}>
                         <td>{id}</td><td>{u.descripcion}</td><td>{nombreDe(empresas, u.empresaId)}</td><td>{siNo(u.esActiva)}</td>
                         {puedeEscribir && <td className="text-end">
-                          <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(u)}><i className="bi bi-pencil" /></button>
-                          <button className="action-btn disable" title="Dar de baja" onClick={() => baja(id)}><i className="bi bi-slash-circle" /></button>
+                          <button className="action-btn edit" title="Editar" aria-label={`Editar${u.descripcion}`} onClick={() => abrirEdicion(u)}><i className="bi bi-pencil" /></button>
+                          <button className="action-btn disable" title="Dar de baja" aria-label={`Dar de baja${u.descripcion}`} onClick={() => baja(id)}><i className="bi bi-slash-circle" /></button>
                         </td>}
                       </tr>
                     );
@@ -129,11 +129,11 @@ export default function UnidadesNegocio() {
           <div className="form-card">
             <form onSubmit={guardar} noValidate>
               <div className="entity-grid">
-                <div className="form-group"><label>Descripción</label>
-                  <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
+                <div className="form-group"><label htmlFor='udn-descripcion'>Descripción</label>
+                  <input id="udn-descripcion" aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
                   <CampoError mensajes={errores.de('descripcion')} /></div>
-                                <div className="form-group"><label>Empresa</label>
-                  <SelectCatalogo catalogo="empresas" value={form.idEmpresa} onChange={(id) => set('idEmpresa', id ?? 0)} invalido={!!errores.de('idEmpresa')} required />
+                                <div className="form-group"><label htmlFor='udn-empresa'>Empresa</label>
+                  <SelectCatalogo id="udn-empresa" catalogo="empresas" value={form.idEmpresa} onChange={(id) => set('idEmpresa', id ?? 0)} invalido={!!errores.de('idEmpresa')} required />
                   <CampoError mensajes={errores.de('idEmpresa')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActiva ?? true} onChange={(e) => set('esActiva', e.target.checked)} /> Activa</label>
               </div>

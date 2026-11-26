@@ -45,23 +45,23 @@ export default function BuscarExistencias() {
 
       <form className="filter-panel" onSubmit={consultar}>
                 <div className="form-group">
-          <label>Empresa</label>
-          <SelectCatalogo catalogo="empresas" value={empresaId} required
+          <label htmlFor="buscar-empresa">Empresa</label>
+          <SelectCatalogo id="buscar-empresa" catalogo="empresas" value={empresaId} required
             onChange={(id) => { setEmpresaId(id); setUdnId(null); setAlmacenId(null); }} />
         </div>
         <div className="form-group">
-          <label>UDN</label>
-          <SelectCatalogo catalogo="udn" value={udnId} empresaId={empresaId} required
+          <label htmlFor="buscar-udn">UDN</label>
+          <SelectCatalogo id="buscar-udn" catalogo="udn" value={udnId} empresaId={empresaId} required
             onChange={(id) => { setUdnId(id); setAlmacenId(null); }} />
         </div>
         <div className="form-group">
-          <label>Almacén</label>
-          <SelectCatalogo catalogo="almacenes" value={almacenId} empresaId={empresaId} udnId={udnId} required
+          <label htmlFor="buscar-almacen">Almacén</label>
+          <SelectCatalogo id="buscar-almacen" catalogo="almacenes" value={almacenId} empresaId={empresaId} udnId={udnId} required
             onChange={setAlmacenId} />
         </div>
         <div className="form-group">
-          <label>Producto</label>
-          <SelectCatalogo catalogo="productos" value={productoId} required
+          <label htmlFor="buscar-producto">Producto</label>
+          <SelectCatalogo id="buscar-producto" catalogo="productos" value={productoId} required
             onChange={setProductoId} />
         </div>
         <button className="btn btn-tec" type="submit"><i className="bi bi-search" /> Consultar</button>

@@ -136,8 +136,8 @@ export default function Almacenes() {
                       <tr key={`${a.idEmpresa}-${a.idUdn}-${a.idAlmacen}-${i}`}>
                         <td>{a.idAlmacen}</td><td>{a.descripcion}</td><td>{a.tipo}</td><td>{nombreDe(empresas, a.idEmpresa)}</td><td>{nombreDe(udns, a.idUdn)}</td><td>{siNo(a.esActivo)}</td>
                         {puedeEscribir && <td className="text-end">
-                          <button className="action-btn edit" title="Editar" onClick={() => abrirEdicion(a)}><i className="bi bi-pencil" /></button>
-                          <button className="action-btn disable" title="Dar de baja" onClick={() => baja(a)}><i className="bi bi-slash-circle" /></button>
+                          <button className="action-btn edit" title="Editar" aria-label={`Editar${a.descripcion}`} onClick={() => abrirEdicion(a)}><i className="bi bi-pencil" /></button>
+                          <button className="action-btn disable" title="Dar de baja" aria-label={`Dar de baja${a.descripcion}`} onClick={() => baja(a)}><i className="bi bi-slash-circle" /></button>
                         </td>}
                       </tr>
                     );
@@ -160,17 +160,17 @@ export default function Almacenes() {
           <div className="form-card">
             <form onSubmit={guardar} noValidate>
               <div className="entity-grid">
-                <div className="form-group"><label>Descripción</label>
-                  <input aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
+                <div className="form-group"><label htmlFor='almacen-descripcion'>Descripción</label>
+                  <input id="almacen-descripcion" aria-invalid={!!errores.de('descripcion')} type="text" value={form.descripcion} onChange={(e) => set('descripcion', e.target.value)} required />
                   <CampoError mensajes={errores.de('descripcion')} /></div>
-                <div className="form-group"><label>Tipo</label>
-                  <input aria-invalid={!!errores.de('tipo')} type="text" value={form.tipo} onChange={(e) => set('tipo', e.target.value)} required />
+                <div className="form-group"><label htmlFor='almacen-tipo'>Tipo</label>
+                  <input id="almacen-tipo" aria-invalid={!!errores.de('tipo')} type="text" value={form.tipo} onChange={(e) => set('tipo', e.target.value)} required />
                   <CampoError mensajes={errores.de('tipo')} /></div>
-                <div className="form-group"><label>Empresa</label>
-                <SelectCatalogo catalogo='empresas' value={form.idEmpresa} onChange={(id) => {set('idEmpresa', id ?? 0); set('idUdn', 0);}} invalido={!!errores.de('idEmpresa')} disabled={editando} required />
+                <div className="form-group"><label htmlFor='almacen-empresa'>Empresa</label>
+                <SelectCatalogo id="almacen-empresa" catalogo='empresas' value={form.idEmpresa} onChange={(id) => {set('idEmpresa', id ?? 0); set('idUdn', 0);}} invalido={!!errores.de('idEmpresa')} disabled={editando} required />
                   <CampoError mensajes={errores.de('idEmpresa')} /></div>
-                <div className="form-group"><label>UDN</label>
-<SelectCatalogo catalogo="udn" value={form.idUdn} empresaId={form.idEmpresa} onChange={(id) => set('idUdn', id ?? 0)} invalido={!!errores.de('idUdn')} disabled={editando} required />                  
+                <div className="form-group"><label htmlFor='almacen-udn'>UDN</label>
+<SelectCatalogo id="almacen-udn" catalogo="udn" value={form.idUdn} empresaId={form.idEmpresa} onChange={(id) => set('idUdn', id ?? 0)} invalido={!!errores.de('idUdn')} disabled={editando} required />                  
   <CampoError mensajes={errores.de('idUdn')} /></div>
                 <label className="check-field"><input type="checkbox" checked={form.esActivo ?? true} onChange={(e) => set('esActivo', e.target.checked)} /> Activo</label>
               </div>

@@ -77,14 +77,14 @@ export default function ImportadorSims() {
         </div>
 
         <div className="form-grid">
-          <div className="form-group"><label>Producto</label>
-            <SelectCatalogo catalogo="productos" value={productoId} onChange={setProductoId} /></div>
-          <div className="form-group"><label>Lote Tecomnet</label>
-            <input type="text" value={loteTecomnet} onChange={(e) => setLoteTecomnet(e.target.value)} /></div>
-          <div className="form-group"><label>Lote Altan</label>
-            <input type="text" value={loteAltan} onChange={(e) => setLoteAltan(e.target.value)} /></div>
-          <div className="form-group"><label>Fecha de compra</label>
-            <input type="date" value={fechaCompra} onChange={(e) => setFechaCompra(e.target.value)} /></div>
+          <div className="form-group"><label htmlFor="importsims-producto">Producto</label>
+            <SelectCatalogo id="importsims-producto" catalogo="productos" value={productoId} onChange={setProductoId} /></div>
+          <div className="form-group"><label htmlFor="importsims-loteTecomnet">Lote Tecomnet</label>
+            <input id="importsims-loteTecomnet" type="text" value={loteTecomnet} onChange={(e) => setLoteTecomnet(e.target.value)} /></div>
+          <div className="form-group"><label htmlFor="importsims-loteAltan">Lote Altan</label>
+            <input id="importsims-loteAltan" type="text" value={loteAltan} onChange={(e) => setLoteAltan(e.target.value)} /></div>
+          <div className="form-group"><label htmlFor="importsims-fecha">Fecha de compra</label>
+            <input id="importsims-fecha" type="date" value={fechaCompra} onChange={(e) => setFechaCompra(e.target.value)} /></div>
         </div>
 
         <button className="btn btn-tec" onClick={importar} disabled={enviando}>
